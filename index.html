@@ -1,0 +1,438 @@
+html
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <!-- 處理 iPhone 瀏海與下方橫條 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>債券質押管理 App - V2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html { -webkit-text-size-adjust: 100%; height: 100%; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+        /* iPhone 安全區域適配 */
+        .safe-area-top { padding-top: env(safe-area-inset-top); }
+        .safe-area-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); }
+        
+        .tab-btn { padding: 0.6rem 0.4rem; font-size: 0.85rem; font-weight: 500; border-radius: 0.75rem; transition: all 0.2s; min-width: 65px; }
+        .tab-btn.active { background-color: #4f46e5; color: white; font-weight: 700; box-shadow: 0 4px 6px -1px rgb(79 70 229 / 0.2); }
+        
+        /* 隱藏捲軸但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* iOS Input 樣式重置 */
+        input, select, textarea { -webkit-appearance: none; appearance: none; }
+        
+        @keyframes modalIn {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-animate { animation: modalIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-32">
+
+    <!-- Header -->
+    <nav class="bg-indigo-700 text-white shadow-lg sticky top-0 z-30 safe-area-top">
+        <div class="max-w-md mx-auto p-4 flex justify-between items-center">
+            <h1 class="font-bold text-lg tracking-tight">債券投資質押 (V2026)</h1>
+            <div class="flex items-center space-x-3">
+                <button onclick="exportData()" class="text-sm bg-white/20 px-3 py-1 rounded-full font-medium">備份</button>
+                <button onclick="openSettingsModal()" class="text-sm bg-white/20 px-3 py-1 rounded-full font-medium">設定</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-md mx-auto p-4 space-y-4">
+        <!-- 總覽卡片 -->
+        <div class="bg-white rounded-[2.5rem] p-7 shadow-sm border border-slate-100">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Portfolio Overview</p>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                    <p class="text-xs text-slate-400 mb-1">國內持倉 (張)</p>
+                    <h2 id="totalBonds" class="text-3xl font-black text-indigo-600">0</h2>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 mb-1">總預估損益</p>
+                    <h2 id="totalProfitLoss" class="text-3xl font-black">$0</h2>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-5 border-t border-slate-50 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-500">00720B 目前市價</span>
+                    <span id="domesticPriceDisplay" onclick="openPriceModal()" class="font-bold text-indigo-600 underline decoration-dotted">$0.00</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">國外債券總市值</span>
+                    <span id="totalOverseasValueDisplay" class="font-semibold">$0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">累計配息收入</span>
+                    <span id="totalDividends" class="font-semibold text-emerald-600">$0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">預估質押利息</span>
+                    <span id="totalInterest" class="font-semibold text-rose-500">-$0</span>
+                </div>
+                <div class="flex justify-between pt-2 border-t font-bold text-slate-700">
+                    <span>總投入成本</span>
+                    <span id="totalCost">$0</span>
+                </div>
+                <div class="flex justify-between font-bold text-indigo-700 text-base">
+                    <span>目前總價值</span>
+                    <span id="marketValue">$0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 導覽 -->
+        <div class="sticky top-[80px] z-20 bg-slate-50/80 backdrop-blur-md py-2">
+            <div class="flex bg-white p-1.5 rounded-2xl shadow-sm overflow-x-auto no-scrollbar justify-between border border-slate-100">
+                <button onclick="switchTab('records')" id="tab-records" class="tab-btn flex-1 text-center">交易</button>
+                <button onclick="switchTab('dividends')" id="tab-dividends" class="tab-btn flex-1 text-center">配息</button>
+                <button onclick="switchTab('interest')" id="tab-interest" class="tab-btn flex-1 text-center">利息</button>
+                <button onclick="switchTab('overseas')" id="tab-overseas" class="tab-btn flex-1 text-center">國外</button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn flex-1 text-center">報表</button>
+            </div>
+        </div>
+
+        <!-- 內容渲染區 -->
+        <div id="recordsView" class="space-y-3"></div>
+        <div id="dividendsView" class="hidden space-y-3"></div>
+        <div id="interestView" class="hidden space-y-3"></div>
+        <div id="overseasView" class="hidden space-y-3"></div>
+        <div id="reportsView" class="hidden space-y-3"></div>
+    </div>
+
+    <!-- 底部浮動按鈕 -->
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-40 safe-area-bottom">
+        <div class="max-w-md mx-auto">
+            <button onclick="openModal()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200 active:scale-95 transition-transform">
+                ＋ 新增數據紀錄
+            </button>
+        </div>
+    </div>
+
+    <!-- 新增紀錄彈窗 -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50">
+        <div class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-black">新增數據</h3>
+                <button onclick="closeModal()" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <input type="hidden" id="editRecordId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">地區</label>
+                        <select id="location" onchange="toggleFields()" class="w-full bg-slate-100 p-4 rounded-2xl border-none font-medium">
+                            <option value="domestic">🏠 國內</option>
+                            <option value="overseas">🌎 國外</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">類型</label>
+                        <select id="type" onchange="toggleFields()" class="w-full bg-slate-100 p-4 rounded-2xl border-none font-medium">
+                            <option value="buy">🔵 買入</option>
+                            <option value="sell">🔴 賣出</option>
+                            <option value="div">💰 配息</option>
+                            <option value="loan">🏦 質押</option>
+                            <option value="interest_expense">➖ 利息支出</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">日期</label>
+                        <input type="date" id="date" class="w-full bg-slate-100 p-4 rounded-2xl border-none">
+                    </div>
+                    <div id="amountGroup">
+                        <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">張數</label>
+                        <input type="number" id="amount" inputmode="decimal" placeholder="0" class="w-full bg-slate-100 p-4 rounded-2xl border-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label id="priceLabel" class="block text-xs font-bold text-slate-400 mb-1 ml-1">單價/金額</label>
+                    <input type="number" id="price" inputmode="decimal" placeholder="輸入數值" class="w-full bg-slate-100 p-4 rounded-2xl border-none text-lg font-bold">
+                </div>
+
+                <div id="rateGroup" class="hidden">
+                    <label class="block text-xs font-bold text-slate-400 mb-1 ml-1">年利率 (%)</label>
+                    <input type="number" id="rate" step="0.01" inputmode="decimal" placeholder="2.15" class="w-full bg-slate-100 p-4 rounded-2xl border-none">
+                </div>
+
+                <button onclick="save()" class="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl mt-4">儲存紀錄</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定彈窗 -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 p-6">
+        <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black mb-6 text-center">數據管理</h3>
+            <div class="space-y-3">
+                <button onclick="exportData()" class="w-full bg-indigo-50 text-indigo-700 font-bold py-4 rounded-2xl">匯出備份 (JSON)</button>
+                <label for="importJsonFile" class="w-full bg-emerald-50 text-emerald-700 font-bold py-4 rounded-2xl text-center block cursor-pointer">匯入還原 (JSON)</label>
+                <input type="file" id="importJsonFile" accept=".json" onchange="importData(event)" class="hidden">
+                <button onclick="resetData()" class="w-full bg-rose-50 text-rose-700 font-bold py-4 rounded-2xl">清空資料</button>
+                <button onclick="closeSettingsModal()" class="w-full text-slate-400 pt-4 font-medium">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 市價彈窗 -->
+    <div id="priceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden items-center justify-center z-50 p-6">
+        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
+            <h3 class="font-black mb-2">更新市價</h3>
+            <p class="text-xs text-slate-400 mb-4">輸入 00720B 最新市場價格</p>
+            <input type="number" id="manualPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600">
+            <div class="flex gap-2">
+                <button onclick="closePriceModal()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-xl">取消</button>
+                <button onclick="saveManualPrice()" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl">更新</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('bond_v2026')) || [];
+        let CURRENT_MARKET_PRICE = localStorage.getItem('current_market_price_v2026') ? parseFloat(localStorage.getItem('current_market_price_v2026')) : 33.66;
+        const SHARE_MULTIPLIER = 1000;
+        let activeTab = 'records';
+
+        // UI 切換
+        function openSettingsModal() { document.getElementById('settingsModal').classList.replace('hidden', 'flex'); }
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.replace('flex', 'hidden'); }
+        function openPriceModal() { document.getElementById('manualPriceInput').value = CURRENT_MARKET_PRICE; document.getElementById('priceModal').classList.replace('hidden', 'flex'); }
+        function closePriceModal() { document.getElementById('priceModal').classList.replace('flex', 'hidden'); }
+        
+        function saveManualPrice() {
+            const val = parseFloat(document.getElementById('manualPriceInput').value);
+            if (val > 0) { CURRENT_MARKET_PRICE = val; localStorage.setItem('current_market_price_v2026', val); closePriceModal(); render(); }
+        }
+
+        function toggleFields() {
+            const type = document.getElementById('type').value;
+            const location = document.getElementById('location').value;
+            const amountGroup = document.getElementById('amountGroup');
+            const rateGroup = document.getElementById('rateGroup');
+            const priceLabel = document.getElementById('priceLabel');
+
+            rateGroup.classList.toggle('hidden', type !== 'loan');
+            
+            if (location === 'overseas' || (type !== 'buy' && type !== 'sell')) {
+                amountGroup.classList.add('hidden');
+                priceLabel.innerText = "總金額 (USD/TWD)";
+            } else {
+                amountGroup.classList.remove('hidden');
+                priceLabel.innerText = "成交單價";
+            }
+        }
+
+        function openModal() {
+            document.getElementById('editRecordId').value = '';
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('modal').classList.replace('hidden', 'flex');
+            toggleFields();
+        }
+
+        function closeModal() { document.getElementById('modal').classList.replace('flex', 'hidden'); document.activeElement.blur(); }
+
+        function save() {
+            const id = document.getElementById('editRecordId').value;
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                location: document.getElementById('location').value,
+                type: document.getElementById('type').value,
+                date: document.getElementById('date').value,
+                amount: parseFloat(document.getElementById('amount').value) || 0,
+                price: parseFloat(document.getElementById('price').value) || 0,
+                rate: parseFloat(document.getElementById('rate').value) || 0
+            };
+            if (id) {
+                const idx = db.findIndex(r => r.id === parseInt(id));
+                db[idx] = data;
+            } else {
+                db.push(data);
+            }
+            localStorage.setItem('bond_v2026', JSON.stringify(db));
+            closeModal();
+            render();
+        }
+
+        function remove(id) { if(confirm('確定刪除此紀錄？')) { db = db.filter(r => r.id !== id); localStorage.setItem('bond_v2026', JSON.stringify(db)); render(); } }
+
+        function editRecord(id) {
+            const r = db.find(item => item.id === id);
+            if (!r) return;
+            openModal();
+            document.getElementById('editRecordId').value = r.id;
+            document.getElementById('location').value = r.location;
+            document.getElementById('type').value = r.type;
+            document.getElementById('date').value = r.date;
+            document.getElementById('amount').value = r.amount;
+            document.getElementById('price').value = r.price;
+            document.getElementById('rate').value = r.rate;
+            toggleFields();
+        }
+
+        function switchTab(tabId) {
+            activeTab = tabId;
+            ['recordsView', 'dividendsView', 'interestView', 'overseasView', 'reportsView'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(tabId + 'View').classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            render();
+        }
+
+        function getChineseType(t) {
+            const m = { 'buy':'買入', 'sell':'賣出', 'div':'配息', 'loan':'質押', 'interest_expense':'利息支出' };
+            return m[t] || t;
+        }
+
+        function render() {
+            let domesticBonds = 0, domesticCost = 0, overseasValue = 0, totalDiv = 0, totalInt = 0;
+            const now = new Date();
+
+            db.forEach(i => {
+                const isDomestic = (i.location || 'domestic') === 'domestic';
+                if (isDomestic) {
+                    if (i.type === 'buy') { domesticBonds += i.amount; domesticCost += (i.price * i.amount * SHARE_MULTIPLIER); }
+                    if (i.type === 'sell') { domesticBonds -= i.amount; domesticCost -= (i.price * i.amount * SHARE_MULTIPLIER); }
+                } else {
+                    if (i.type === 'buy') overseasValue += i.price;
+                    if (i.type === 'sell') overseasValue -= i.price;
+                }
+                
+                if (i.type === 'div') totalDiv += i.price;
+                if (i.type === 'interest_expense') totalInt += i.price;
+                if (i.type === 'loan') {
+                    const days = Math.max(0, (now - new Date(i.date.replace(/-/g, '/'))) / 86400000);
+                    totalInt += (i.price * (i.rate / 100) * (days / 365));
+                }
+            });
+
+            const marketVal = (domesticBonds * CURRENT_MARKET_PRICE * SHARE_MULTIPLIER) + overseasValue;
+            const pl = (marketVal - domesticCost) + totalDiv - totalInt;
+
+            document.getElementById('totalBonds').innerText = domesticBonds.toLocaleString();
+            document.getElementById('totalProfitLoss').innerText = (pl >= 0 ? '+' : '') + '$' + Math.round(pl).toLocaleString();
+            document.getElementById('totalProfitLoss').className = `text-3xl font-black ${pl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`;
+            document.getElementById('domesticPriceDisplay').innerText = '$' + CURRENT_MARKET_PRICE.toFixed(2);
+            document.getElementById('totalOverseasValueDisplay').innerText = '$' + Math.round(overseasValue).toLocaleString();
+            document.getElementById('totalDividends').innerText = '$' + Math.round(totalDiv).toLocaleString();
+            document.getElementById('totalInterest').innerText = '-$' + Math.round(totalInt).toLocaleString();
+            document.getElementById('totalCost').innerText = '$' + Math.round(domesticCost).toLocaleString();
+            document.getElementById('marketValue').innerText = '$' + Math.round(marketVal).toLocaleString();
+
+            renderList();
+        }
+
+        function renderList() {
+            const container = document.getElementById(activeTab + 'View');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            if (activeTab === 'reports') { renderReports(); return; }
+
+            let list = [...db].sort((a,b) => new Date(b.date.replace(/-/g, '/')) - new Date(a.date.replace(/-/g, '/')));
+            
+            if (activeTab === 'records') list = list.filter(i => i.type === 'buy' || i.type === 'sell');
+            else if (activeTab === 'dividends') list = list.filter(i => i.type === 'div');
+            else if (activeTab === 'interest') list = list.filter(i => i.type === 'loan' || i.type === 'interest_expense');
+            else if (activeTab === 'overseas') list = list.filter(i => i.location === 'overseas');
+
+            list.forEach(i => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-[1.5rem] shadow-sm flex flex-col gap-3 border border-slate-50";
+                
+                const typeColor = (i.type === 'buy' || i.type === 'div') ? 'text-emerald-600' : (i.type === 'sell' || i.type === 'interest_expense' ? 'text-rose-600' : 'text-indigo-600');
+                const locTag = i.location === 'overseas' ? '<span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full ml-2">國外</span>' : '<span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full ml-2">國內</span>';
+
+                let detail = i.type === 'loan' ? `本金: $${i.price.toLocaleString()} (@${i.rate}%)` : (i.amount > 0 ? `${i.amount}張 / $${i.price}` : `金額: $${i.price.toLocaleString()}`);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center font-bold ${typeColor}">${getChineseType(i.type)} ${locTag}</div>
+                            <div class="text-[11px] text-slate-400 mt-1">${i.date}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editRecord(${i.id})" class="bg-slate-50 text-indigo-600 text-xs px-3 py-2 rounded-lg font-bold">編輯</button>
+                            <button onclick="remove(${i.id})" class="bg-slate-50 text-rose-400 text-xs px-3 py-2 rounded-lg font-bold">刪除</button>
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium text-slate-600 bg-slate-50/50 p-3 rounded-xl">${detail}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderReports() {
+            const view = document.getElementById('reportsView');
+            const years = db.reduce((acc, i) => {
+                const y = i.date.split('-')[0];
+                if (!acc[y]) acc[y] = { buy:0, sell:0, div:0, int:0 };
+                const val = (i.location === 'domestic' && i.amount) ? (i.price * i.amount * SHARE_MULTIPLIER) : i.price;
+                if (i.type === 'buy') acc[y].buy += val;
+                else if (i.type === 'sell') acc[y].sell += val;
+                else if (i.type === 'div') acc[y].div += val;
+                else if (i.type === 'interest_expense' || i.type === 'loan') {
+                   if (i.type === 'interest_expense') acc[y].int += i.price;
+                   // 質押利息簡易算入當年
+                   if (i.type === 'loan') {
+                      const days = Math.max(0, (new Date() - new Date(i.date.replace(/-/g, '/'))) / 86400000);
+                      acc[y].int += (i.price * (i.rate / 100) * (days / 365));
+                   }
+                }
+                return acc;
+            }, {});
+
+            Object.keys(years).sort((a,b)=>b-a).forEach(y => {
+                const d = years[y];
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-[2rem] shadow-sm border border-indigo-50";
+                card.innerHTML = `
+                    <h3 class="font-black text-indigo-700 mb-4 text-lg">${y} 年度統計</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm font-medium">
+                        <div class="bg-slate-50 p-3 rounded-2xl"><p class="text-slate-400 text-[10px] mb-1">總買入</p>$${Math.round(d.buy).toLocaleString()}</div>
+                        <div class="bg-slate-50 p-3 rounded-2xl"><p class="text-slate-400 text-[10px] mb-1">總賣出</p>$${Math.round(d.sell).toLocaleString()}</div>
+                        <div class="bg-emerald-50 p-3 rounded-2xl text-emerald-700"><p class="text-emerald-600/50 text-[10px] mb-1">配息收入</p>$${Math.round(d.div).toLocaleString()}</div>
+                        <div class="bg-rose-50 p-3 rounded-2xl text-rose-700"><p class="text-rose-600/50 text-[10px] mb-1">利息支出</p>$${Math.round(d.int).toLocaleString()}</div>
+                    </div>
+                `;
+                view.appendChild(card);
+            });
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = `bonds_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function importData(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    db = JSON.parse(event.target.result);
+                    localStorage.setItem('bond_v2026', JSON.stringify(db));
+                    render(); closeSettingsModal(); alert('匯入成功');
+                } catch(err) { alert('檔案格式錯誤'); }
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        function resetData() { if(confirm('確定清空所有資料？')) { db = []; localStorage.removeItem('bond_v2026'); render(); closeSettingsModal(); } }
+
+        window.onload = () => { render(); switchTab('records'); };
+    </script>
+</body>
+</html>
