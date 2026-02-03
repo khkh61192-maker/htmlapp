@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>債券質押管理 V2026</title>
+    <title>債券質押與信貸管理 V2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -25,11 +25,11 @@
     <!-- Header -->
     <nav class="bg-theme-blue text-white shadow-lg sticky top-0 z-30 safe-area-top">
         <div class="max-w-md mx-auto p-4 flex justify-between items-center">
-            <h1 class="font-bold text-lg tracking-tight">債券投資質押 (V2026)</h1>
+            <h1 class="font-bold text-lg tracking-tight">資產質押與信貸 (V2026)</h1>
             <div class="flex items-center space-x-2">
-                <button onclick="exportData()" class="text-[11px] bg-white/20 px-3 py-1.5 rounded-full font-medium active:bg-white/40">備份</button>
-                <button onclick="triggerImport()" class="text-[11px] bg-white/20 px-2 py-1.5 rounded-full font-medium active:bg-white/40">更新</button>
-                <button onclick="openSettingsModal()" class="text-[11px] bg-white/20 px-2 py-1.5 rounded-full font-medium active:bg-white/40">設定</button>
+                <button onclick="exportData()" class="text-[11px] bg-white/20 px-3 py-1.5 rounded-full font-medium">備份</button>
+                <button onclick="triggerImport()" class="text-[11px] bg-white/20 px-2 py-1.5 rounded-full font-medium">更新</button>
+                <button onclick="openSettingsModal()" class="text-[11px] bg-white/20 px-2 py-1.5 rounded-full font-medium">設定</button>
             </div>
         </div>
     </nav>
@@ -39,16 +39,16 @@
         <div class="bg-white rounded-[2.5rem] p-7 shadow-sm border border-slate-100 text-slate-800">
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div><p class="text-xs text-slate-400 mb-1 font-bold text-left uppercase">國內持倉 (張)</p><h2 id="totalBonds" class="text-2xl font-black text-indigo-600 truncate">0</h2></div>
-                <div class="text-right"><p class="text-xs text-slate-400 mb-1 font-bold text-left uppercase">總預估損益</p><h2 id="totalProfitLoss" class="text-xl font-black text-indigo-600 break-all leading-none">$0</h2></div>
+                <div class="text-right"><p class="text-xs text-slate-400 mb-1 font-bold text-left uppercase">總預估損益</p><h2 id="totalProfitLoss" class="text-xl font-black break-all leading-none">$0</h2></div>
             </div>
             <div class="space-y-3 pt-5 border-t border-slate-100 text-sm text-slate-600 font-medium">
                 <div class="flex justify-between"><span>00720B 目前市價</span><span id="domesticPriceDisplay" onclick="openPriceModal()" class="font-bold text-indigo-600 underline decoration-dotted cursor-pointer">$0.00</span></div>
                 <div class="flex justify-between"><span>總平均價位</span><span id="totalAvgPrice" class="font-bold text-slate-700">$0.00</span></div>
+                <div class="flex justify-between text-rose-500 font-bold"><span>信貸總餘額</span><span id="totalCreditBalance">$0</span></div>
                 <div class="flex justify-between"><span>質押總金額</span><span id="totalPledgeAmt" class="font-bold text-slate-700">$0</span></div>
                 <div class="flex justify-between"><span>質押總維持率</span><span id="totalMaintenanceRatio" class="font-bold text-indigo-700">0%</span></div>
                 <div class="flex justify-between text-emerald-600"><span>累計配息收入</span><span id="totalDividends">$0</span></div>
-                <div class="flex justify-between text-rose-400 font-normal"><span>已結算利息</span><span id="settledInterest">-$0</span></div>
-                <div class="flex justify-between text-rose-600 font-bold"><span>未結算利息</span><span id="unsettledInterest">-$0</span></div>
+                <div class="flex justify-between text-rose-600"><span>未結算質押利息</span><span id="unsettledInterest">-$0</span></div>
                 <div class="flex justify-between pt-2 border-t font-bold text-slate-700 bg-slate-50 p-2 rounded-lg">
                     <span>總資產 (淨值)</span>
                     <span id="totalAssetsDisplay">$0</span>
@@ -62,7 +62,7 @@
             <div class="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 overflow-x-auto no-scrollbar">
                 <button onclick="switchTab('records')" id="tab-records" class="tab-btn active">交易</button>
                 <button onclick="switchTab('dividends')" id="tab-dividends" class="tab-btn">配息</button>
-                <button onclick="switchTab('interest')" id="tab-interest" class="tab-btn">利息</button>
+                <button onclick="switchTab('interest')" id="tab-interest" class="tab-btn">利息/信貸</button>
                 <button onclick="switchTab('overseas')" id="tab-overseas" class="tab-btn">國外</button>
                 <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn">報表</button>
                 <button onclick="switchTab('charts')" id="tab-charts" class="tab-btn">圖表</button>
@@ -83,33 +83,54 @@
                 <h3 id="modalTitle" class="text-xl font-black">新增數據</h3>
                 <button onclick="closeAllModals()" class="text-slate-400 text-2xl p-2">&times;</button>
             </div>
-            <div class="space-y-4 text-left text-slate-800">
+            <div class="space-y-4 text-left">
                 <input type="hidden" id="editId">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-3 text-slate-800">
                     <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">地區</label><select id="fLocation" onchange="toggleFormFields()" class="w-full bg-slate-100 p-4 rounded-2xl font-medium text-slate-700"><option value="domestic">🏠 國內</option><option value="overseas">🌎 國外</option></select></div>
-                    <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">類型</label><select id="fType" onchange="toggleFormFields()" class="w-full bg-slate-100 p-4 rounded-2xl font-medium text-slate-700"><option value="buy">🔵 買入</option><option value="sell">🔴 賣出</option><option value="div">💰 配息</option><option value="loan">🏦 質押</option><option value="interest_expense">➖ 利息支出</option></select></div>
+                    <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">類型</label><select id="fType" onchange="toggleFormFields()" class="w-full bg-slate-100 p-4 rounded-2xl font-medium text-slate-700">
+                        <option value="buy">🔵 買入</option>
+                        <option value="sell">🔴 賣出</option>
+                        <option value="div">💰 配息</option>
+                        <option value="loan">🏦 質押</option>
+                        <option value="credit_loan">🏦 信貸</option>
+                        <option value="interest_expense">➖ 利息支出</option>
+                    </select></div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label id="dateLabel" class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">日期</label><input type="date" id="fDate" class="w-full bg-slate-100 p-4 rounded-2xl font-bold"></div>
-                    <div id="fEndDateGroup"><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">償還日</label><input type="date" id="fEndDate" class="w-full bg-slate-100 p-4 rounded-2xl font-bold"></div>
-                    <div id="fAmountGroup"><label id="amountLabel" class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">張數</label><input type="number" id="fAmount" oninput="calcDivTotal()" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl font-bold" placeholder="0"></div>
+                <div class="grid grid-cols-2 gap-3 text-slate-800">
+                    <div><label id="dateLabel" class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">日期</label><input type="date" id="fDate" class="w-full bg-slate-100 p-4 rounded-2xl font-bold text-slate-700"></div>
+                    <div id="fEndDateGroup"><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">償還日</label><input type="date" id="fEndDate" class="w-full bg-slate-100 p-4 rounded-2xl font-bold text-slate-700"></div>
+                    <div id="fAmountGroup"><label id="amountLabel" class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase text-slate-400">張數</label><input type="number" id="fAmount" oninput="calcDivTotal()" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl font-bold text-slate-700" placeholder="0"></div>
                 </div>
-                <div id="fDivPerShareGroup" class="hidden">
+
+                <!-- 信貸擴充欄位 -->
+                <div id="fCreditGroup" class="hidden space-y-4">
+                    <div class="grid grid-cols-2 gap-3 text-slate-800">
+                        <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">貸款總期數</label><input type="number" id="fTotalTerm" inputmode="numeric" class="w-full bg-slate-100 p-4 rounded-2xl font-bold" placeholder="例如 84"></div>
+                        <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">每月還款日</label><input type="number" id="fDueDay" inputmode="numeric" class="w-full bg-slate-100 p-4 rounded-2xl font-bold" placeholder="15"></div>
+                        <div><label class="block text-[10px] font-bold text-indigo-500 mb-1 ml-1 uppercase">剩餘還款期數</label><input type="number" id="fRemainingTerm" inputmode="numeric" class="w-full bg-indigo-50 p-4 rounded-2xl font-bold text-indigo-700" placeholder="例如 42"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-[10px] font-bold text-rose-500 mb-1 ml-1 uppercase italic">每月還款額 (修正用)</label><input type="number" id="fCustomEMI" inputmode="decimal" class="w-full bg-rose-50 p-4 rounded-2xl font-bold text-rose-700 underline" placeholder="銀行App顯示金額"></div>
+                        <div><label class="block text-[10px] font-bold text-rose-500 mb-1 ml-1 uppercase italic">當前貸款餘額 (修正用)</label><input type="number" id="fCustomBalance" inputmode="decimal" class="w-full bg-rose-50 p-4 rounded-2xl font-bold text-rose-700 underline" placeholder="銀行App顯示餘額"></div>
+                    </div>
+                </div>
+
+                <div id="fDivPerShareGroup" class="hidden text-slate-800">
                     <label class="block text-[10px] font-bold text-indigo-500 mb-1 ml-1 uppercase">每股配息 (1張=1000股)</label>
                     <input type="number" id="fDivPerShare" oninput="calcDivTotal()" step="0.0001" inputmode="decimal" class="w-full bg-indigo-50 p-4 rounded-2xl text-indigo-700 font-bold" placeholder="例如 0.54">
                 </div>
-                <div id="fCollateralGroup" class="hidden"><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">擔保張數</label><input type="number" id="fCollateral" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl font-bold" placeholder="0"></div>
-                <div><label id="priceLabel" class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">金額/單價</label><input type="number" id="fPrice" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl text-lg font-bold text-slate-700" placeholder="0"></div>
-                <div id="fRateGroup" class="hidden"><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">年利率 (%)</label><input type="number" id="fRate" step="0.01" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl font-bold" placeholder="2.15"></div>
-                <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">備註註解</label><textarea id="fComment" class="w-full bg-slate-100 p-4 rounded-2xl text-sm font-medium h-20" placeholder="在此輸入註解..."></textarea></div>
+                <div id="fCollateralGroup" class="hidden text-slate-800"><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">擔保張數</label><input type="number" id="fCollateral" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl font-bold text-slate-700" placeholder="0"></div>
+                <div><label id="priceLabel" class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase text-slate-400">金額/單價</label><input type="number" id="fPrice" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl text-lg font-bold text-slate-700" placeholder="0"></div>
+                <div id="fRateGroup" class="hidden text-slate-800"><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">年利率 (%)</label><input type="number" id="fRate" step="0.01" inputmode="decimal" class="w-full bg-slate-100 p-4 rounded-2xl font-bold text-slate-700" placeholder="2.15"></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase text-slate-400">備註註解</label><textarea id="fComment" class="w-full bg-slate-100 p-4 rounded-2xl text-sm font-medium h-20 text-slate-700" placeholder="在此輸入註解..."></textarea></div>
                 <button onclick="saveData()" class="w-full bg-theme-blue text-white font-black py-5 rounded-2xl shadow-xl mt-4 text-lg">儲存紀錄</button>
             </div>
         </div>
 
-        <!-- 其他 Modal -->
-        <div id="settingsModal" class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center hidden text-slate-800"><h3 class="text-xl font-black mb-6">數據管理</h3><div class="space-y-3"><button onclick="openExcelModal()" class="w-full bg-indigo-50 text-indigo-700 font-bold py-4 rounded-2xl border border-indigo-100">Excel 貼上匯入</button><button onclick="exportData()" class="w-full bg-slate-50 text-slate-700 font-bold py-4 rounded-2xl border border-slate-100 text-sm">匯出備份 (JSON)</button><button onclick="triggerImport()" class="w-full bg-emerald-50 text-emerald-700 font-bold py-4 rounded-2xl">匯入更新 (JSON)</button><button onclick="resetData()" class="w-full bg-rose-50 text-rose-700 font-bold py-4 rounded-2xl text-xs font-bold">清空資料</button><button onclick="closeAllModals()" class="w-full text-slate-400 pt-4 font-medium">關閉</button></div></div>
-        <div id="excelModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate hidden text-center text-slate-800"><h3 class="text-xl font-black mb-2">Excel 快速匯入</h3><textarea id="excelPasteArea" class="w-full bg-slate-100 p-4 rounded-2xl h-40 text-xs font-mono mb-4 border-none text-slate-700" placeholder="貼上日期、張數、價位..."></textarea><div class="flex gap-2"><button onclick="closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-xl text-sm">取消</button><button onclick="processExcelImport()" class="flex-1 bg-theme-blue text-white font-bold py-3 rounded-xl text-sm">執行匯入</button></div></div>
-        <div id="priceModal" class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center hidden text-slate-800"><h3 class="font-black mb-2 text-left ml-2">更新市價</h3><input type="number" id="mPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600"><div class="flex gap-2"><button onclick="closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-xl text-sm">取消</button><button onclick="updateMarketPrice()" class="flex-1 bg-theme-blue text-white font-bold py-3 rounded-xl text-sm">更新</button></div></div>
+        <!-- Settings / Excel / Price Modals (略...) -->
+        <div id="settingsModal" class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center hidden text-slate-800"><h3 class="text-xl font-black mb-6 text-slate-800">數據管理</h3><div class="space-y-3"><button onclick="openExcelModal()" class="w-full bg-indigo-50 text-indigo-700 font-bold py-4 rounded-2xl border border-indigo-100">Excel 貼上匯入</button><button onclick="exportData()" class="w-full bg-slate-50 text-slate-700 font-bold py-4 rounded-2xl border border-slate-100 text-sm">匯出備份 (JSON)</button><button onclick="triggerImport()" class="w-full bg-emerald-50 text-emerald-700 font-bold py-4 rounded-2xl text-sm">匯入更新 (JSON)</button><button onclick="resetData()" class="w-full bg-rose-50 text-rose-700 font-bold py-4 rounded-2xl text-xs font-bold">清空資料</button><button onclick="closeAllModals()" class="w-full text-slate-400 pt-4 font-medium text-sm">關閉</button></div></div>
+        <div id="excelModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate hidden text-center text-slate-800"><h3 class="text-xl font-black mb-2 text-slate-800">Excel 快速匯入</h3><textarea id="excelPasteArea" class="w-full bg-slate-100 p-4 rounded-2xl h-40 text-xs font-mono mb-4 border-none text-slate-700" placeholder="貼上日期、張數、價位..."></textarea><div class="flex gap-2"><button onclick="closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-xl text-sm">取消</button><button onclick="processExcelImport()" class="flex-1 bg-theme-blue text-white font-bold py-3 rounded-xl text-sm text-white">執行匯入</button></div></div>
+        <div id="priceModal" class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center hidden text-slate-800"><h3 class="font-black mb-2 text-left ml-2 text-slate-800">更新市價</h3><input type="number" id="mPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600"><div class="flex gap-2"><button onclick="closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-xl text-sm">取消</button><button onclick="updateMarketPrice()" class="flex-1 bg-theme-blue text-white font-bold py-3 rounded-xl text-sm text-white">更新</button></div></div>
     </div>
 
     <input type="file" id="importFile" class="hidden" onchange="handleFileImport(event)" accept=".json">
@@ -122,7 +143,7 @@
         let activeTab = 'records';
         let mainChart = null;
 
-        window.onload = function() { loadAllData(); renderUI(); };
+        window.onload = function() { loadAllData(); autoProcessCreditLoans(); renderUI(); };
 
         function loadAllData() {
             try {
@@ -135,167 +156,264 @@
                     date: i.date || new Date().toISOString().split('T')[0],
                     endDate: i.endDate || '',
                     amount: parseFloat(i.amount) || 0,
-                    collateralAmount: parseFloat(i.collateralAmount) || 0,
                     price: parseFloat(i.price) || 0,
                     rate: parseFloat(i.rate) || 0,
+                    collateralAmount: parseFloat(i.collateralAmount) || 0,
+                    totalTerm: parseFloat(i.totalTerm) || 0,
+                    remainingTerm: parseFloat(i.remainingTerm) || 0,
+                    dueDay: parseFloat(i.dueDay) || 0,
+                    customEMI: parseFloat(i.customEMI) || 0,
+                    customBalance: parseFloat(i.customBalance) || 0,
                     comment: i.comment || '',
-                    divPerShare: parseFloat(i.divPerShare) || 0
+                    divPerShare: parseFloat(i.divPerShare) || 0,
+                    lastProcessedMonth: i.lastProcessedMonth || ''
                 }));
                 const p = localStorage.getItem(PRICE_KEY);
                 if (p) marketPrice = parseFloat(p);
             } catch(e) { db = []; }
         }
 
-        // --- 核心計算 (含資產與利息分開) ---
-        function renderUI() {
-            const now = new Date();
-            let sumBonds = 0, sumCost = 0, sumOverseas = 0, sumDiv = 0, sumSettledInt = 0, sumUnsettledInt = 0, loanP = 0, loanC = 0;
+        // --- 信貸邏輯 ---
+        function autoProcessCreditLoans() {
+            const today = new Date();
+            const currentTag = `${today.getFullYear()}-${today.getMonth() + 1}`;
+            let changed = false;
             db.forEach(i => {
-                const p = i.price || 0, a = i.amount || 0;
-                if (i.location === 'domestic') {
-                    if (i.type === 'buy') { sumBonds += a; sumCost += (p * a * 1000); }
-                    if (i.type === 'sell') { sumBonds -= a; sumCost -= (p * a * 1000); }
-                } else {
-                    if (i.type === 'buy') sumOverseas += p;
-                    if (i.type === 'sell') sumOverseas -= p;
-                }
-                if (i.type === 'div') sumDiv += p;
-                if (i.type === 'interest_expense') sumSettledInt += p;
-                if (i.type === 'loan') {
-                    sumUnsettledInt += calcItemInterest(i, now);
-                    loanP += p;
-                    loanC += (i.collateralAmount || 0);
+                if (i.type === 'credit_loan' && i.remainingTerm > 0) {
+                    if (today.getDate() >= i.dueDay && i.lastProcessedMonth !== currentTag) {
+                        i.remainingTerm -= 1;
+                        // 如果有手動輸入當前餘額，自動扣除一期本金估值 (簡化：若無手動 EMI 則用公式)
+                        if (i.customBalance > 0) {
+                            const emi = i.customEMI > 0 ? i.customEMI : calcEMI(i.price, i.rate, i.totalTerm);
+                            const monthlyInterest = (i.customBalance * (i.rate / 100)) / 12;
+                            i.customBalance -= (emi - monthlyInterest);
+                        }
+                        i.lastProcessedMonth = currentTag;
+                        changed = true;
+                    }
                 }
             });
-
-            const mktVal = (sumBonds * marketPrice * 1000) + sumOverseas;
-            const totalInt = sumSettledInt + sumUnsettledInt;
-            const pl = (mktVal - sumCost) + sumDiv - totalInt;
-            const totalRatio = loanP > 0 ? ((loanC * 1000 * marketPrice) / loanP * 100) : 0;
-            const avgPrice = sumBonds > 0 ? (sumCost / (sumBonds * 1000)) : 0;
-
-            // 總資產淨值 = 市值 - 未結算利息 - 質押本金
-            const totalAssets = mktVal - sumUnsettledInt - loanP;
-
-            document.getElementById('totalBonds').innerText = sumBonds.toLocaleString();
-            const plEl = document.getElementById('totalProfitLoss');
-            plEl.innerText = (pl >= 0 ? '+' : '') + '$' + Math.round(pl).toLocaleString();
-            plEl.style.color = pl >= 0 ? '#3B7695' : '#e11d48';
-
-            document.getElementById('domesticPriceDisplay').innerText = '$' + marketPrice.toFixed(2);
-            document.getElementById('totalAvgPrice').innerText = '$' + avgPrice.toFixed(2);
-            document.getElementById('totalPledgeAmt').innerText = '$' + Math.round(loanP).toLocaleString();
-            document.getElementById('totalMaintenanceRatio').innerText = totalRatio > 0 ? totalRatio.toFixed(1) + '%' : '0%';
-            document.getElementById('totalDividends').innerText = '$' + Math.round(sumDiv).toLocaleString();
-            document.getElementById('settledInterest').innerText = '-$' + Math.round(sumSettledInt).toLocaleString();
-            document.getElementById('unsettledInterest').innerText = '-$' + Math.round(sumUnsettledInt).toLocaleString();
-            document.getElementById('totalAssetsDisplay').innerText = '$' + Math.round(totalAssets).toLocaleString();
-            document.getElementById('marketValue').innerText = '$' + Math.round(mktVal).toLocaleString();
-            renderList();
+            if (changed) localStorage.setItem(DB_KEY, JSON.stringify(db));
         }
 
-        // --- 圖表零線對齊修正 ---
-        function renderCharts(container) {
-            if (db.length === 0) { container.innerHTML = '<p class="text-center py-10 text-slate-300">暫無數據</p>'; return; }
-            container.innerHTML = `<div class="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden"><canvas id="historyChart" style="height: 350px;"></canvas></div><div class="flex justify-around text-[10px] text-slate-400 mt-2 px-4 font-bold"><span class="text-indigo-600">● 國內張數 (右軸)</span><span>● 金額 (左軸)</span></div>`;
-            const sortedDb = [...db].sort((a,b) => new Date(a.date) - new Date(b.date));
-            const labels = [], dShares = [], dPL = [], dLoan = [], dDiv = [], dAssets = [], dValue = [];
-            let curB = 0, curC = 0, curO = 0, curD = 0, curL = 0, curI = 0;
-            const now = new Date();
-
-            sortedDb.forEach(i => {
-                labels.push(i.date);
-                if (i.location==='domestic') { if (i.type==='buy') { curB += i.amount; curC += (i.price * i.amount * 1000); } else if (i.type==='sell') { curB -= i.amount; curC -= (i.price * i.amount * 1000); } }
-                else { if (i.type==='buy') curO += i.price; else if (i.type==='sell') curO -= i.price; }
-                if (i.type==='div') curD += i.price; 
-                let stepUnsettled = 0;
-                if (i.type==='interest_expense') curI += i.price; 
-                if (i.type==='loan') { curL += i.price; stepUnsettled = calcItemInterest(i, now); }
-                const v = (curB * marketPrice * 1000) + curO;
-                dShares.push(Math.max(0, curB));
-                dPL.push(v - curC + curD - (curI + stepUnsettled));
-                dLoan.push(curL);
-                dDiv.push(curD);
-                dAssets.push(v - stepUnsettled - curL);
-                dValue.push(v);
-            });
-
-            const ctx = document.getElementById('historyChart').getContext('2d');
-            if (mainChart) mainChart.destroy();
-
-            // 零線同步算法：確保左右軸的比例對稱，讓 0 點在同一高度
-            const allAmt = [...dPL, ...dLoan, ...dDiv, ...dAssets, ...dValue];
-            const maxA = Math.max(...allAmt, 1000000);
-            const minA = Math.min(...allAmt, 0);
-            const maxS = Math.max(...dShares, 10);
-            
-            // 計算右軸對應左軸負數區域應有的比例
-            const ySMin = minA < 0 ? (minA * maxS / maxA) : 0;
-
-            mainChart = new Chart(ctx, {
-                type: 'line', data: { labels, datasets: [
-                    { label: '張數 (右)', data: dShares, borderColor: '#4f46e5', backgroundColor: '#4f46e511', tension: 0.3, pointRadius: 0, yAxisID: 'yS', fill: true },
-                    { label: '損益', data: dPL, borderColor: '#ef4444', tension: 0.3, pointRadius: 0, yAxisID: 'yA' },
-                    { label: '質押', data: dLoan, borderColor: '#f59e0b', tension: 0.3, pointRadius: 0, yAxisID: 'yA' },
-                    { label: '配息', data: dDiv, borderColor: '#10b981', tension: 0.3, pointRadius: 0, yAxisID: 'yA' },
-                    { label: '總資產', data: dAssets, borderColor: '#3B7695', tension: 0.3, pointRadius: 0, yAxisID: 'yA' },
-                    { label: '市值', data: dValue, borderColor: '#3b82f6', tension: 0.3, pointRadius: 0, yAxisID: 'yA', hidden: true }
-                ]}, options: { responsive: true, maintainAspectRatio: false, scales: { 
-                    yA: { type: 'linear', position: 'left', min: minA, max: maxA, ticks: { font: { size: 9 }, callback: v => v >= 10000 || v <= -10000 ? (v/10000)+'萬' : v } },
-                    yS: { type: 'linear', position: 'right', min: ySMin, max: maxS, ticks: { font: { size: 9, weight: 'bold' }, color: '#4f46e5', callback: v => v < 0 ? '' : v }, grid: { drawOnChartArea: false } },
-                    x: { ticks: { font: { size: 8 }, maxRotation: 45 } }
-                }, plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { size: 10 } } } } }
-            });
+        function calcEMI(principal, annualRate, totalTerm) {
+            if (totalTerm <= 0) return 0;
+            const r = annualRate / 12 / 100;
+            if (r === 0) return principal / totalTerm;
+            return (principal * r * Math.pow(1 + r, totalTerm)) / (Math.pow(1 + r, totalTerm) - 1);
         }
 
-        // --- 報表渲染 ---
-        function renderReports(container, now) {
-            const years = db.reduce((acc, i) => { const y = (i.date || "2026").split('-')[0]; if (!acc[y]) acc[y] = { buy:0, buyShares:0, sell:0, div:0, settledInt:0, unsettledInt:0 }; const p = i.price || 0, a = i.amount || 0; if (i.type === 'buy') { acc[y].buy += (i.location === 'domestic' ? p * a * 1000 : p); if (i.location === 'domestic') acc[y].buyShares += a; } else if (i.type === 'sell') { acc[y].sell += (i.location === 'domestic' ? p * a * 1000 : p); } else if (i.type === 'div') { acc[y].div += p; } else if (i.type === 'interest_expense') { acc[y].settledInt += p; } else if (i.type === 'loan') { acc[y].unsettledInt += calcItemInterest(i, now); } return acc; }, {});
-            Object.keys(years).sort((a,b)=>b-a).forEach(y => {
-                const d = years[y]; const yearlyAvg = d.buyShares > 0 ? (d.buy / (d.buyShares * 1000)) : 0;
-                container.innerHTML += `<div class="bg-white p-6 rounded-[2rem] border border-indigo-50 mb-4 shadow-sm text-slate-800 text-sm font-bold"><h3 class="font-black text-indigo-700 mb-4 text-center text-lg">${y} 年度統計</h3><div class="grid grid-cols-2 gap-3 text-slate-700"><div class="bg-slate-50 p-3 rounded-xl">總買入: $${Math.round(d.buy).toLocaleString()}</div><div class="bg-slate-50 p-3 rounded-xl">總賣出: $${Math.round(d.sell).toLocaleString()}</div><div class="bg-emerald-50 p-3 rounded-xl text-emerald-700 font-bold">配息: $${Math.round(d.div).toLocaleString()}</div><div class="bg-rose-50 p-3 rounded-xl text-rose-700 font-bold">利息: $${Math.round(d.settledInt + d.unsettledInt).toLocaleString()}</div><div class="bg-indigo-50 p-3 rounded-xl text-indigo-700 col-span-2 text-center text-xs">年度平均買價: $${yearlyAvg.toFixed(2)}</div></div></div>`;
-            });
+        function calcCreditBalance(principal, annualRate, totalTerm, remainingTerm) {
+            if (remainingTerm <= 0) return 0;
+            const emi = calcEMI(principal, annualRate, totalTerm);
+            const r = annualRate / 12 / 100;
+            if (r === 0) return emi * remainingTerm;
+            return (emi / r) * (1 - Math.pow(1 + r, -remainingTerm));
+        }
+
+        // --- 核心計算與渲染 ---
+        function renderUI() {
+            try {
+                const now = new Date();
+                let sumBonds = 0, sumCost = 0, sumOverseas = 0, sumDiv = 0, sumSettledInt = 0, sumUnsettledInt = 0, loanP = 0, loanC = 0, sumCreditBal = 0;
+                
+                db.forEach(i => {
+                    const p = parseFloat(i.price) || 0, a = parseFloat(i.amount) || 0;
+                    if (i.type === 'credit_loan') {
+                        // 優先使用手動輸入的餘額
+                        sumCreditBal += i.customBalance > 0 ? i.customBalance : calcCreditBalance(p, i.rate, i.totalTerm, i.remainingTerm);
+                    } else {
+                        if (i.location === 'domestic') {
+                            if (i.type === 'buy') { sumBonds += a; sumCost += (p * a * 1000); }
+                            if (i.type === 'sell') { sumBonds -= a; sumCost -= (p * a * 1000); }
+                        } else {
+                            if (i.type === 'buy') sumOverseas += p;
+                            if (i.type === 'sell') sumOverseas -= p;
+                        }
+                        if (i.type === 'div') sumDiv += p;
+                        if (i.type === 'interest_expense') sumSettledInt += p;
+                        if (i.type === 'loan') {
+                            sumUnsettledInt += calcItemInterest(i, now);
+                            loanP += p;
+                            loanC += parseFloat(i.collateralAmount) || 0;
+                        }
+                    }
+                });
+
+                const mktVal = (sumBonds * marketPrice * 1000) + sumOverseas;
+                const totalInt = sumSettledInt + sumUnsettledInt;
+                const pl = (mktVal - sumCost) + sumDiv - totalInt;
+                const totalRatio = loanP > 0 ? ((loanC * 1000 * marketPrice) / loanP * 100) : 0;
+                const avgPrice = sumBonds > 0 ? (sumCost / (sumBonds * 1000)) : 0;
+                const totalAssets = mktVal - sumUnsettledInt - loanP - sumCreditBal;
+
+                document.getElementById('totalBonds').innerText = sumBonds.toLocaleString();
+                const plEl = document.getElementById('totalProfitLoss');
+                plEl.innerText = (pl >= 0 ? '+' : '') + '$' + Math.round(pl).toLocaleString();
+                plEl.style.color = pl >= 0 ? '#3B7695' : '#e11d48';
+
+                document.getElementById('domesticPriceDisplay').innerText = '$' + marketPrice.toFixed(2);
+                document.getElementById('totalAvgPrice').innerText = '$' + avgPrice.toFixed(2);
+                document.getElementById('totalCreditBalance').innerText = '$' + Math.round(sumCreditBal).toLocaleString();
+                document.getElementById('totalPledgeAmt').innerText = '$' + Math.round(loanP).toLocaleString();
+                document.getElementById('totalMaintenanceRatio').innerText = totalRatio > 0 ? totalRatio.toFixed(1) + '%' : '0%';
+                document.getElementById('totalDividends').innerText = '$' + Math.round(sumDiv).toLocaleString();
+                document.getElementById('unsettledInterest').innerText = '-$' + Math.round(sumUnsettledInt).toLocaleString();
+                document.getElementById('totalAssetsDisplay').innerText = '$' + Math.round(totalAssets).toLocaleString();
+                document.getElementById('marketValue').innerText = '$' + Math.round(mktVal).toLocaleString();
+                
+                renderList();
+            } catch(e) { console.error("Render fail", e); }
         }
 
         function renderList() {
             const view = document.getElementById('mainContentView'); view.innerHTML = ''; const now = new Date();
             if (activeTab === 'reports') { renderReports(view, now); return; }
             if (activeTab === 'charts') { renderCharts(view); return; }
+
             let filtered = [...db];
-            if (activeTab==='interest') { filtered=filtered.filter(i=>i.type==='loan'||i.type==='interest_expense'); filtered.sort((a,b)=>(a.endDate?new Date(a.endDate):new Date('2099-12-31'))-(b.endDate?new Date(b.endDate):new Date('2099-12-31'))); }
-            else { filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)); if(activeTab==='records') filtered=filtered.filter(i=>i.type==='buy'||i.type==='sell'); else if(activeTab==='dividends') filtered=filtered.filter(i=>i.type==='div'); else if(activeTab==='overseas') filtered=filtered.filter(i=>i.location==='overseas'); }
+            if (activeTab === 'interest') {
+                filtered = filtered.filter(i => i.type === 'loan' || i.type === 'interest_expense' || i.type === 'credit_loan');
+                filtered.sort((a, b) => (a.endDate ? new Date(a.endDate) : new Date('2099-12-31')) - (b.endDate ? new Date(b.endDate) : new Date('2099-12-31')));
+            } else {
+                filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+                if (activeTab === 'records') filtered = filtered.filter(i => i.type === 'buy' || i.type === 'sell');
+                else if (activeTab === 'dividends') filtered = filtered.filter(i => i.type === 'div');
+                else if (activeTab === 'overseas') filtered = filtered.filter(i => i.location === 'overseas');
+            }
+
             if (filtered.length === 0) { view.innerHTML = '<div class="text-center py-10 text-slate-300 text-sm font-medium">尚無數據紀錄</div>'; return; }
+
             filtered.forEach(i => {
                 const card = document.createElement('div');
-                let isExpiringSoon = false; if (activeTab === 'interest' && i.type === 'loan' && i.endDate) { const dl = (new Date(i.endDate) - now) / 86400000; if (dl >= 0 && dl <= 30) isExpiringSoon = true; }
+                let isExpiringSoon = false;
+                if (i.type === 'loan' && i.endDate) {
+                    const daysLeft = (new Date(i.endDate) - now) / 86400000;
+                    if (daysLeft >= 0 && daysLeft <= 30) isExpiringSoon = true;
+                }
                 card.className = `p-5 rounded-[1.5rem] shadow-sm border mb-3 ${isExpiringSoon ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-100'}`;
-                const dateDisplay = i.type === 'loan' ? `${i.date} ~ ${i.endDate || '進行中'}` : i.date;
-                let detail = i.type === 'loan' ? `<div class="text-xs space-y-1"><p class="text-indigo-600 font-bold">維持率: ${(i.price>0?((i.collateralAmount*1000*marketPrice)/i.price*100):0).toFixed(1)}%</p><p class="text-rose-500 font-bold text-slate-700">目前累積利息: $${Math.round(calcItemInterest(i,now)).toLocaleString()}</p><p class="text-slate-500 font-bold">利率: ${i.rate}% | 本金: $${i.price.toLocaleString()}</p></div>` : (i.type === 'interest_expense' ? `<div class="text-xs text-rose-600 font-bold">已結算利息支出: $${i.price.toLocaleString()}</div>` : `<div class="text-xs text-slate-600 font-medium">${i.type === 'div' && i.divPerShare > 0 ? i.amount+'張 × 每股$'+i.divPerShare : (i.amount > 0 ? i.amount+'張 / 單價 $'+i.price : '總金額: $'+i.price.toLocaleString())}</div>`);
-                card.innerHTML = `<div class="flex justify-between items-start mb-1 text-slate-800 text-sm"><div><span class="font-bold ${i.type==='buy'||i.type==='div'?'text-emerald-600':'text-indigo-600'}">${getLabel(i.type)}</span><span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded ml-2">${i.location==='overseas'?'國外':'國內'}</span><div class="text-[10px] text-slate-300 mt-0.5 font-bold">${dateDisplay}</div></div><div class="flex gap-4"><button onclick="editData(${i.id})" class="text-indigo-600 text-xs font-bold">編輯</button><button onclick="deleteData(${i.id})" class="text-rose-400 text-xs font-bold">刪除</button></div></div><div class="${isExpiringSoon ? 'bg-white/50' : 'bg-slate-50'} p-3 rounded-xl mt-2">${detail}${i.comment?`<div class="text-[11px] text-indigo-500 font-bold mt-2 border-t border-slate-100 pt-2 italic"># ${i.comment}</div>`:''}</div>`;
+                
+                let detail = '';
+                if (i.type === 'credit_loan') {
+                    const emi = i.customEMI > 0 ? i.customEMI : calcEMI(i.price, i.rate, i.totalTerm);
+                    const bal = i.customBalance > 0 ? i.customBalance : calcCreditBalance(i.price, i.rate, i.totalTerm, i.remainingTerm);
+                    detail = `<div class="text-xs space-y-1"><p class="text-rose-500 font-bold text-right text-sm">餘額: $${Math.round(bal).toLocaleString()}</p><p>每月還款: $${Math.round(emi).toLocaleString()} | 剩餘期數: ${i.remainingTerm} / ${i.totalTerm}</p><p class="text-slate-400">還款日: 每月 ${i.dueDay} 號</p></div>`;
+                } else if (i.type === 'loan') {
+                    const itemInt = calcItemInterest(i, now);
+                    const itemRatio = i.price > 0 ? ((i.collateralAmount * 1000 * marketPrice) / i.price * 100) : 0;
+                    detail = `<div class="text-xs space-y-1"><p class="text-indigo-600 font-bold">維持率: ${itemRatio.toFixed(1)}%</p><p class="text-rose-500 font-bold text-right">利息: $${Math.round(itemInt).toLocaleString()}</p><p class="text-slate-500">利率: ${i.rate}% | 本金: $${i.price.toLocaleString()}</p></div>`;
+                } else {
+                    const calcTxt = (i.type==='div'&&i.divPerShare>0) ? `${i.amount}張 × 每股$${i.divPerShare}` : (i.amount>0 ? `${i.amount}張 / 單價 $${i.price}` : `總額: $${i.price.toLocaleString()}`);
+                    detail = `<div class="text-xs text-slate-600 font-medium">${calcTxt}</div>`;
+                }
+
+                const dateRange = i.type === 'loan' ? `${i.date} ~ ${i.endDate || '進行中'}` : i.date;
+
+                card.innerHTML = `<div class="flex justify-between items-start mb-1 text-slate-800 text-sm"><div><span class="font-bold ${i.type==='buy'?'text-emerald-600':'text-indigo-600'}">${getLabel(i.type)}</span><span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded ml-2">${i.location==='overseas'?'國外':'國內'}</span><div class="text-[10px] text-slate-300 mt-0.5 font-bold">${dateRange}</div></div><div class="flex gap-4"><button onclick="editData('${i.id}')" class="text-indigo-600 text-xs font-bold">編輯</button><button onclick="deleteData('${i.id}')" class="text-rose-400 text-xs font-bold">刪除</button></div></div><div class="${isExpiringSoon?'bg-white/50':'bg-slate-50'} p-3 rounded-xl mt-2">${detail}${i.comment?`<div class="text-[11px] text-indigo-500 font-bold mt-2 border-t border-slate-200 pt-2 italic"># ${i.comment}</div>`:''}</div>`;
                 view.appendChild(card);
             });
         }
 
+        // --- 報表與圖表 ---
+        function renderReports(container, now) {
+            const years = db.reduce((acc, i) => { const y = (i.date || "2026").split('-')[0]; if (!acc[y]) acc[y] = { buy:0, buyShares:0, domesticCost:0, sell:0, div:0, int:0 }; const p = i.price || 0, a = i.amount || 0; if (i.type === 'buy') { acc[y].buy += (i.location === 'domestic' ? p * a * 1000 : p); if (i.location === 'domestic') { acc[y].buyShares += a; acc[y].domesticCost += (p * a * 1000); } } else if (i.type === 'sell') { acc[y].sell += (i.location === 'domestic' ? p * a * 1000 : p); } else if (i.type === 'div') { acc[y].div += p; } else if (i.type === 'interest_expense' || i.type === 'loan') { acc[y].int += (i.type === 'loan' ? calcItemInterest(i, now) : p); } return acc; }, {});
+            Object.keys(years).sort((a,b)=>b-a).forEach(y => { const d = years[y]; const yearlyAvg = d.buyShares > 0 ? (d.domesticCost / (d.buyShares * 1000)) : 0; container.innerHTML += `<div class="bg-white p-6 rounded-[2rem] border border-indigo-50 mb-4 shadow-sm text-slate-800 font-bold"><h3 class="font-black text-indigo-700 mb-4 text-center text-lg">${y} 年度統計</h3><div class="grid grid-cols-2 gap-3 text-slate-700 text-sm"><div class="bg-slate-50 p-3 rounded-xl">總買入: $${Math.round(d.buy).toLocaleString()}</div><div class="bg-slate-50 p-3 rounded-xl">總賣出: $${Math.round(d.sell).toLocaleString()}</div><div class="bg-emerald-50 p-3 rounded-xl text-emerald-700 font-bold">配息: $${Math.round(d.div).toLocaleString()}</div><div class="bg-rose-50 p-3 rounded-xl text-rose-700 font-bold">利息: $${Math.round(d.int).toLocaleString()}</div><div class="bg-indigo-50 p-3 rounded-xl text-indigo-700 col-span-2 text-center text-xs italic">國內平均買價: $${yearlyAvg.toFixed(2)}</div></div></div>`; });
+        }
+
+        function renderCharts(container) {
+            container.innerHTML = `<div class="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden text-slate-800"><canvas id="historyChart" style="height: 350px;"></canvas></div><div class="flex justify-around text-[10px] text-slate-400 mt-2 px-4 font-bold"><span class="text-indigo-600">● 國內張數 (右軸)</span><span>● 金額 (左軸)</span></div>`;
+            const sorted = [...db].sort((a,b) => new Date(a.date) - new Date(b.date));
+            const labels = [], dShares = [], dPL = [], dLoan = [], dAssets = [];
+            let curB = 0, curC = 0, curO = 0, curD = 0, curL = 0, curI = 0, curDebt = 0;
+            const now = new Date();
+            sorted.forEach(i => {
+                labels.push(i.date);
+                if (i.type === 'credit_loan') { curDebt = calcCreditBalance(i.price, i.rate, i.totalTerm, i.remainingTerm); }
+                else {
+                    const p = i.price || 0, a = i.amount || 0;
+                    if (i.location === 'domestic') { if (i.type === 'buy') { curB += a; curC += (p * a * 1000); } else if (i.type === 'sell') { curB -= a; curC -= (p * a * 1000); } }
+                    else { if (i.type === 'buy') curO += i.price; else if (i.type === 'sell') curO -= i.price; }
+                    if (i.type === 'div') curD += p; if (i.type === 'loan') { curL += i.price; curI += calcItemInterest(i, now); }
+                }
+                const v = (curB * marketPrice * 1000) + curO;
+                dShares.push(Math.max(0, curB)); dPL.push(v - curC + curD - curI); dLoan.push(curL + curDebt); dAssets.push(v - curI - curL - curDebt);
+            });
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            if (mainChart) mainChart.destroy();
+            const yAMin = Math.min(...dPL, ...dAssets, 0);
+            const yAMax = Math.max(...dPL, ...dAssets, ...dLoan, 1000000);
+            const ySMax = Math.max(...dShares, 10);
+            const ySMin = yAMin < 0 ? (yAMin * ySMax / yAMax) : 0;
+            mainChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [
+                { label: '張數 (右)', data: dShares, borderColor: '#4f46e5', backgroundColor: '#4f46e511', tension: 0.3, pointRadius: 0, yAxisID: 'yS', fill: true },
+                { label: '損益', data: dPL, borderColor: '#ef4444', tension: 0.3, pointRadius: 0, yAxisID: 'yA' },
+                { label: '負債', data: dLoan, borderColor: '#f59e0b', tension: 0.3, pointRadius: 0, yAxisID: 'yA' },
+                { label: '總資產', data: dAssets, borderColor: '#3B7695', tension: 0.3, pointRadius: 0, yAxisID: 'yA' }
+            ]}, options: { responsive: true, maintainAspectRatio: false, scales: { 
+                yA: { type: 'linear', position: 'left', min: yAMin, max: yAMax, ticks: { font: { size: 9 }, callback: v => v >= 10000 || v <= -10000 ? (v/10000)+'萬' : v } },
+                yS: { type: 'linear', position: 'right', min: ySMin, max: ySMax, ticks: { font: { size: 9, weight: 'bold' }, color: '#4f46e5', callback: v => v < 0 ? '' : v }, grid: { drawOnChartArea: false } },
+                x: { ticks: { font: { size: 8 }, maxRotation: 45 } }
+            }, plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { size: 10 } } } } } });
+        }
+
         // --- 功能函數 ---
-        function calcDivTotal() { const t = document.getElementById('fType').value; if (t === 'div') { const s = parseFloat(document.getElementById('fAmount').value) || 0, p = parseFloat(document.getElementById('fDivPerShare').value) || 0; if (s > 0 && p > 0) document.getElementById('fPrice').value = Math.round(s * 1000 * p); } }
-        function toggleFormFields() { const t = document.getElementById('fType').value, loc = document.getElementById('fLocation').value; document.getElementById('fRateGroup').classList.toggle('hidden', t !== 'loan'); document.getElementById('fEndDateGroup').classList.toggle('hidden', t !== 'loan'); document.getElementById('fCollateralGroup').classList.toggle('hidden', t !== 'loan'); document.getElementById('fDivPerShareGroup').classList.toggle('hidden', t !== 'div'); document.getElementById('amountLabel').innerText = (t === 'div' ? '配息張數' : '張數'); document.getElementById('dateLabel').innerText = (t === 'loan' ? '起息日' : '日期'); document.getElementById('priceLabel').innerText = (t === 'loan' ? '質押本金' : (t === 'div' ? '配息總額' : (t === 'interest_expense' ? '結算金額' : '金額/單價'))); document.getElementById('fAmountGroup').classList.toggle('hidden', (t === 'loan' || t === 'interest_expense' || (t !== 'div' && loc === 'overseas'))); }
-        function calcItemInterest(i, now) { if (!i.date) return 0; const start = new Date(i.date); const endLimit = i.endDate ? new Date(i.endDate) : now; const end = now < endLimit ? now : endLimit; const days = Math.max(0, (end - start) / 86400000); return (i.price * (i.rate / 100) * (days / 365)); }
-        function switchTab(tab) { activeTab = tab; document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); if (b.innerText.includes(tab==='records'?'交易':tab==='dividends'?'配息':tab==='interest'?'利息':tab==='overseas'?'國外':tab==='reports'?'報表':'圖表')) b.classList.add('active'); }); renderUI(); }
-        function closeAllModals() { document.getElementById('modalOverlay').classList.add('hidden'); ['dataModal', 'settingsModal', 'priceModal', 'excelModal'].forEach(id => document.getElementById(id).classList.add('hidden')); }
-        function openModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden', 'flex'); document.getElementById('dataModal').classList.remove('hidden'); document.getElementById('editId').value = ''; document.getElementById('modalTitle').innerText = '新增數據'; document.getElementById('fDate').valueAsDate = new Date(); document.getElementById('fEndDate').value = ''; document.getElementById('fAmount').value = ''; document.getElementById('fDivPerShare').value = ''; document.getElementById('fPrice').value = ''; document.getElementById('fCollateral').value = ''; document.getElementById('fRate').value = '2.15'; document.getElementById('fComment').value = ''; toggleFormFields(); }
-        function openPriceModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden', 'flex'); document.getElementById('priceModal').classList.remove('hidden'); document.getElementById('mPriceInput').value = marketPrice; }
-        function openSettingsModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden', 'flex'); document.getElementById('settingsModal').classList.remove('hidden'); }
-        function openExcelModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden', 'flex'); document.getElementById('excelModal').classList.remove('hidden'); document.getElementById('excelPasteArea').value = ''; }
-        function updateMarketPrice() { const v = parseFloat(document.getElementById('mPriceInput').value); if (v > 0) { marketPrice = v; localStorage.setItem(PRICE_KEY, v); closeAllModals(); renderUI(); } }
-        function saveData() { const id = document.getElementById('editId').value; const item = { id: id ? parseFloat(id) : Date.now(), location: document.getElementById('fLocation').value, type: document.getElementById('fType').value, date: document.getElementById('fDate').value, endDate: document.getElementById('fEndDate').value, amount: parseFloat(document.getElementById('fAmount').value) || 0, divPerShare: parseFloat(document.getElementById('fDivPerShare').value) || 0, collateralAmount: parseFloat(document.getElementById('fCollateral').value) || 0, price: parseFloat(document.getElementById('fPrice').value) || 0, rate: parseFloat(document.getElementById('fRate').value) || 0, comment: document.getElementById('fComment').value || '' }; if (id) { const idx = db.findIndex(r => r.id == id); if (idx !== -1) db[idx] = item; } else { db.push(item); } localStorage.setItem(DB_KEY, JSON.stringify(db)); closeAllModals(); renderUI(); }
-        function editData(id) { const r = db.find(i => i.id == id); if (!r) return; openModal(); document.getElementById('modalTitle').innerText = '編輯紀錄'; document.getElementById('editId').value = r.id; document.getElementById('fLocation').value = r.location; document.getElementById('fType').value = r.type; document.getElementById('fDate').value = r.date; document.getElementById('fEndDate').value = r.endDate || ''; document.getElementById('fAmount').value = r.amount; document.getElementById('fDivPerShare').value = r.divPerShare; document.getElementById('fCollateral').value = r.collateralAmount; document.getElementById('fPrice').value = r.price; document.getElementById('fRate').value = r.rate; document.getElementById('fComment').value = r.comment; toggleFormFields(); }
-        function deleteData(id) { if (confirm('確定刪除？')) { db = db.filter(i => i.id != id); localStorage.setItem(DB_KEY, JSON.stringify(db)); renderUI(); } }
-        function resetData() { if (confirm('確定清空所有資料？')) { localStorage.clear(); location.reload(); } }
-        async function exportData() { const now = new Date(); const fileName = `bonds_backup_${now.toISOString().split('T')[0]}_${now.toLocaleTimeString('zh-TW', { hour12: false }).replace(/:/g, '-')}.json`; const dataStr = JSON.stringify(db, null, 2); if ('showSaveFilePicker' in window) { try { const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'JSON File', accept: {'application/json': ['.json']} }] }); const writable = await handle.createWritable(); await writable.write(dataStr); await writable.close(); return; } catch (err) { if (err.name === 'AbortError') return; } } const b = new Blob([dataStr], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = fileName; a.click(); }
+        function toggleFormFields() {
+            const t = document.getElementById('fType').value, loc = document.getElementById('fLocation').value;
+            const isCredit = (t === 'credit_loan');
+            document.getElementById('fCreditGroup').classList.toggle('hidden', !isCredit);
+            document.getElementById('fRateGroup').classList.toggle('hidden', t !== 'loan' && !isCredit);
+            document.getElementById('fEndDateGroup').classList.toggle('hidden', t !== 'loan');
+            document.getElementById('fCollateralGroup').classList.toggle('hidden', t !== 'loan');
+            document.getElementById('fDivPerShareGroup').classList.toggle('hidden', t !== 'div');
+            document.getElementById('fAmountGroup').classList.toggle('hidden', isCredit || t === 'loan' || (t !== 'div' && loc === 'overseas'));
+            document.getElementById('dateLabel').innerText = isCredit ? '申貸日期' : (t === 'loan' ? '起息日' : '日期');
+            document.getElementById('priceLabel').innerText = isCredit ? '貸款總本金' : (t === 'loan' ? '質押本金' : (t === 'div' ? '配息總額' : (t === 'interest_expense' ? '結算金額' : '金額/單價')));
+        }
+
+        function saveData() {
+            const id = document.getElementById('editId').value;
+            const item = { id: id || Date.now() + Math.random(), location: document.getElementById('fLocation').value, type: document.getElementById('fType').value, date: document.getElementById('fDate').value, endDate: document.getElementById('fEndDate').value, amount: parseFloat(document.getElementById('fAmount').value) || 0, price: parseFloat(document.getElementById('fPrice').value) || 0, rate: parseFloat(document.getElementById('fRate').value) || 0, totalTerm: parseFloat(document.getElementById('fTotalTerm').value) || 0, remainingTerm: parseFloat(document.getElementById('fRemainingTerm').value) || 0, dueDay: parseFloat(document.getElementById('fDueDay').value) || 0, customEMI: parseFloat(document.getElementById('fCustomEMI').value) || 0, customBalance: parseFloat(document.getElementById('fCustomBalance').value) || 0, comment: document.getElementById('fComment').value || '', divPerShare: parseFloat(document.getElementById('fDivPerShare').value) || 0, collateralAmount: parseFloat(document.getElementById('fCollateral').value) || 0 };
+            if (id) { const idx = db.findIndex(r => r.id == id); db[idx] = item; } else { db.push(item); }
+            localStorage.setItem(DB_KEY, JSON.stringify(db)); closeAllModals(); renderUI();
+        }
+
+        function editData(id) {
+            const r = db.find(i => i.id == id); if (!r) return; openModal();
+            document.getElementById('editId').value = r.id;
+            document.getElementById('fLocation').value = r.location;
+            document.getElementById('fType').value = r.type;
+            document.getElementById('fDate').value = r.date;
+            document.getElementById('fPrice').value = r.price;
+            document.getElementById('fRate').value = r.rate;
+            document.getElementById('fTotalTerm').value = r.totalTerm || '';
+            document.getElementById('fRemainingTerm').value = r.remainingTerm || '';
+            document.getElementById('fDueDay').value = r.dueDay || '';
+            document.getElementById('fCustomEMI').value = r.customEMI || '';
+            document.getElementById('fCustomBalance').value = r.customBalance || '';
+            document.getElementById('fComment').value = r.comment;
+            document.getElementById('fAmount').value = r.amount;
+            document.getElementById('fDivPerShare').value = r.divPerShare;
+            document.getElementById('fCollateral').value = r.collateralAmount;
+            toggleFormFields();
+        }
+
+        // --- 基礎函數 ---
+        function getLabel(t) { return {buy:'🔵 買入', sell:'🔴 賣出', div:'💰 配息', loan:'🏦 質押', credit_loan:'🏦 信貸', interest_expense:'➖ 利息'}[t] || t; }
+        function calcItemInterest(i, now) { if (!i.date) return 0; const s = new Date(i.date); const eL = i.endDate ? new Date(i.endDate) : now; const d = Math.max(0, (Math.min(now, eL) - s) / 86400000); return (parseFloat(i.price) * (parseFloat(i.rate)/100) * (d/365)); }
+        function switchTab(t) { activeTab = t; document.querySelectorAll('.tab-btn').forEach(b => { b.classList.toggle('active', b.id === 'tab-'+t); }); renderUI(); }
+        function closeAllModals() { document.getElementById('modalOverlay').classList.add('hidden'); ['dataModal','settingsModal','priceModal','excelModal'].forEach(m => document.getElementById(m).classList.add('hidden')); }
+        function openModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('dataModal').classList.remove('hidden'); document.getElementById('editId').value=''; toggleFormFields(); }
+        function openSettingsModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('settingsModal').classList.remove('hidden'); }
+        function openPriceModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('priceModal').classList.remove('hidden'); document.getElementById('mPriceInput').value = marketPrice; }
+        function openExcelModal() { closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('excelModal').classList.remove('hidden'); }
+        function updateMarketPrice() { const v = parseFloat(document.getElementById('mPriceInput').value); if(v>0){ marketPrice=v; localStorage.setItem(PRICE_KEY, v); closeAllModals(); renderUI(); } }
+        function deleteData(id) { if(confirm('刪除？')){ db=db.filter(i=>i.id!=id); localStorage.setItem(DB_KEY, JSON.stringify(db)); renderUI(); } }
+        function resetData() { if(confirm('清空？')){ localStorage.clear(); location.reload(); } }
+        function calcDivTotal() { const t=document.getElementById('fType').value; if(t==='div'){ const s=parseFloat(document.getElementById('fAmount').value)||0,p=parseFloat(document.getElementById('fDivPerShare').value)||0; if(s>0&&p>0) document.getElementById('fPrice').value=Math.round(s*1000*p); } }
+        async function exportData() { const now = new Date(); const ts = now.toISOString().split('T')[0]+'_'+now.getHours()+'-'+now.getMinutes(); const b = new Blob([JSON.stringify(db, null, 2)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `bonds_backup_${ts}.json`; a.click(); }
         function triggerImport() { document.getElementById('importFile').click(); }
-        function handleFileImport(e) { const f = e.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = (ev) => { try { db = JSON.parse(ev.target.result); localStorage.setItem(DB_KEY, JSON.stringify(db)); location.reload(); } catch(e) { alert('格式錯誤'); } }; reader.readAsText(f); }
-        function processExcelImport() { const rawText = document.getElementById('excelPasteArea').value; if (!rawText.trim()) return; const lines = rawText.trim().split('\n'); let count = 0; lines.forEach(line => { const cols = line.split('\t'); if (cols.length >= 3) { let rawDate = cols[0].trim().replace(/\//g, '-'); const parts = rawDate.split('-'); if (parts.length === 3) { db.push({ id: Date.now() + Math.random(), location: 'domestic', type: 'buy', date: `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`, amount: parseFloat(cols[1].trim()), price: parseFloat(cols[2].trim()), collateralAmount: 0, rate: 0, endDate: '', comment: '', divPerShare: 0 }); count++; } } }); if (count > 0) { localStorage.setItem(DB_KEY, JSON.stringify(db)); alert(`成功匯入 ${count} 筆交易！`); closeAllModals(); renderUI(); } }
-        function getLabel(t) { return {buy:'🔵 買入', sell:'🔴 賣出', div:'💰 配息', loan:'🏦 質押', interest_expense:'➖ 利息支出'}[t] || t; }
+        function handleFileImport(e) { const f = e.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload=(ev)=>{ try{ db=JSON.parse(ev.target.result); localStorage.setItem(DB_KEY,JSON.stringify(db)); location.reload(); }catch(e){alert('格式錯誤');}}; reader.readAsText(f); }
+        function processExcelImport() { const rawText = document.getElementById('excelPasteArea').value; if (!rawText.trim()) return; const lines = rawText.trim().split('\n'); let count = 0; lines.forEach(line => { const cols = line.split('\t'); if (cols.length >= 3) { let rawDate = cols[0].trim().replace(/\//g, '-'); const parts = rawDate.split('-'); if (parts.length === 3) { db.push({ id: Date.now() + Math.random(), location: 'domestic', type: 'buy', date: `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`, amount: parseFloat(cols[1].trim()), price: parseFloat(cols[2].trim()), collateralAmount: 0, rate: 0, endDate: '', comment: '', divPerShare: 0 }); count++; } } }); if (count > 0) { localStorage.setItem(DB_KEY, JSON.stringify(db)); alert(`成功匯入 ${count} 筆！`); closeAllModals(); renderUI(); } }
     </script>
 </body>
 </html>
