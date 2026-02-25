@@ -1,9 +1,13 @@
+--- START OF FILE text/html ---
+
 <!-- 
 [AI HANDOVER & DEVELOPER INFO]
-版本：V2026.02.25 - 更新 19 (現金分頁 Summary 增強)
-修改內容：
-1. 修正 renderSummary：當處於 'cash' 分頁時，顯示現金總額與各帳戶明細（包含帳戶名稱、最新餘額與日期）。
-2. 優化 UI 佈局：現金明細採用與股票明細一致的卡片風格。
+版本：V2026.02.25 - 更新 21 (股票 Summary 欄位增強)
+開發規範：
+1. 修改後，必須在 CONFIG.VERSION_LOG 陣列最上方新增紀錄。
+2. 股票 Summary：新增「最新市價」欄位，並將明細表調整為 5 欄 (代號/股數/均價/現價/市值)。
+3. 備份檔名格式：`assets_backup_YYYYMMDD_HHMM.json`。
+4. 現金計算邏輯：帳戶制，取各帳戶最新日期餘額。
 -->
 
 <!DOCTYPE html>
@@ -49,13 +53,13 @@
     </nav>
 
     <div class="max-w-md mx-auto p-4 space-y-4 font-bold">
-        <!-- 總覽卡片 (動態區域) -->
+        <!-- 總覽卡片 -->
         <div id="summaryCard" class="bg-white rounded-[2.5rem] p-7 shadow-sm border border-slate-100 font-bold text-slate-800 transition-all duration-300"></div>
 
         <!-- Tab 導覽列 -->
         <div class="sticky top-[75px] z-20 bg-slate-50/80 backdrop-blur-md py-2 font-bold">
             <div class="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 tab-scroll-container no-scrollbar text-slate-800 font-bold">
-                <button onclick="UI.switchTab('records')" id="tab-records" class="tab-btn active">交易</button>
+                <button onclick="UI.switchTab('records')" id="tab-records" class="tab-btn active">債券</button>
                 <button onclick="UI.switchTab('stocks')" id="tab-stocks" class="tab-btn font-bold">股票</button>
                 <button onclick="UI.switchTab('cash')" id="tab-cash" class="tab-btn font-bold">現金</button>
                 <button onclick="UI.switchTab('dividends')" id="tab-dividends" class="tab-btn font-bold">配息</button>
@@ -75,7 +79,7 @@
         <div class="max-w-md mx-auto font-bold"><button onclick="UI.openModal()" class="w-full bg-theme-blue text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-transform text-lg">＋ 新增數據紀錄</button></div>
     </div>
 
-    <!-- Modals (同上個版本) -->
+    <!-- Modals -->
     <div id="versionModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-6 font-bold">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl modal-animate text-slate-800 font-bold">
             <h3 class="text-lg font-black mb-4 border-b pb-2 text-indigo-700 font-bold">版本更新紀錄</h3>
@@ -83,8 +87,8 @@
             <button onclick="UI.closeVersionModal()" class="w-full bg-theme-blue text-white py-3 rounded-xl font-bold mt-6">關閉</button>
         </div>
     </div>
-    
-    <!-- 其他 Modal 略 (保持邏輯一致) -->
+
+    <!-- 其餘 Modal 保持不變 -->
     <div id="modalOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50">
         <div id="dataModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate max-h-[90vh] overflow-y-auto hidden">
             <div class="flex justify-between items-center mb-6">
@@ -122,11 +126,11 @@
                 <button onclick="DATA.saveRecord()" class="w-full bg-theme-blue text-white font-black py-5 rounded-2xl shadow-xl mt-4 text-lg">儲存紀錄</button>
             </div>
         </div>
-        <!-- 幫助、Excel、市價等 Modal 略... -->
-        <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-6"><div class="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl modal-animate text-center font-bold"><h3 id="helpTitle" class="text-lg font-black mb-4">說明</h3><p id="helpContent" class="text-sm text-slate-600 leading-relaxed mb-6"></p><button onclick="UI.closeHelp()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-500">知道了</button></div></div>
-        <div id="settingsModal" class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-6">數據管理</h3><div class="space-y-3"><button onclick="DATA.syncToLine()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm border border-emerald-100 font-black font-bold">🟢 同步至雲端 (LINE 分享)</button><button onclick="UI.openExcelModal()" class="w-full bg-indigo-50 text-indigo-700 py-4 rounded-2xl text-sm font-bold">Excel 快速匯入</button><button onclick="DATA.exportJSON()" class="w-full bg-slate-50 text-slate-700 py-4 rounded-2xl text-sm font-bold">匯出備份 (JSON)</button><button onclick="DATA.triggerImport()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm font-bold">匯入更新 (JSON)</button><button onclick="DATA.resetAll()" class="w-full bg-rose-50 text-rose-700 py-4 rounded-2xl text-xs font-bold">清空資料</button><button onclick="UI.closeAllModals()" class="w-full text-slate-400 pt-4 font-medium text-sm font-bold">關閉</button></div></div>
-        <div id="priceModal" class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="font-black mb-2 text-left ml-2">更新 00720B 市價</h3><input type="number" id="mPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600 font-bold"><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.updateManualPrice()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">更新</button></div></div>
-        <div id="excelModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate hidden text-center fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-2">Excel 快速匯入</h3><textarea id="excelPasteArea" class="w-full bg-slate-100 p-4 rounded-2xl h-40 text-xs font-mono mb-4 border-none font-bold" placeholder="日期(Tab)張數(Tab)單價"></textarea><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.processExcel()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">執行匯入</button></div></div>
+        <!-- 幫助、設定、Excel、市價等 Modal 略... (邏輯與之前版本相同) -->
+        <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-6 font-bold"><div class="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl modal-animate text-center font-bold"><h3 id="helpTitle" class="text-lg font-black mb-4">說明</h3><p id="helpContent" class="text-sm text-slate-600 leading-relaxed mb-6"></p><button onclick="UI.closeHelp()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-500">知道了</button></div></div>
+        <div id="settingsModal" class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-6">數據管理</h3><div class="space-y-3 font-bold"><button onclick="DATA.syncToLine()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm border border-emerald-100 font-black font-bold">🟢 同步至雲端 (LINE 分享)</button><button onclick="UI.openExcelModal()" class="w-full bg-indigo-50 text-indigo-700 py-4 rounded-2xl text-sm font-bold">Excel 快速匯入</button><button onclick="DATA.exportJSON()" class="w-full bg-slate-50 text-slate-700 py-4 rounded-2xl text-sm font-bold">匯出備份 (JSON)</button><button onclick="DATA.triggerImport()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm font-bold">匯入更新 (JSON)</button><button onclick="DATA.resetAll()" class="w-full bg-rose-50 text-rose-700 py-4 rounded-2xl text-xs font-bold">清空資料</button><button onclick="UI.closeAllModals()" class="w-full text-slate-400 pt-4 font-medium text-sm font-bold">關閉</button></div></div>
+        <div id="priceModal" class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="font-black mb-2 text-left ml-2 font-bold">更新 00720B 市價</h3><input type="number" id="mPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600 font-bold"><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.updateManualPrice()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">更新</button></div></div>
+        <div id="excelModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate hidden text-center fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-2 font-bold">Excel 快速匯入</h3><textarea id="excelPasteArea" class="w-full bg-slate-100 p-4 rounded-2xl h-40 text-xs font-mono mb-4 border-none font-bold" placeholder="日期(Tab)張數(Tab)單價"></textarea><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.processExcel()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">執行匯入</button></div></div>
     </div>
 
     <input type="file" id="importFile" class="hidden" onchange="DATA.handleFileImport(event)" accept=".json">
@@ -139,9 +143,9 @@
             INITIAL_PRICE: 33.66,
             RETIRE_TARGET: "2031-03-15",
             VERSION_LOG: [
-                { ver: "V2026.02.25 - 更新 19", logs: ["「現金」分頁 Summary 增強：現在會顯示現金總額及各個帳戶的最新餘額與日期紀錄。"] },
-                { ver: "V2026.02.25 - 更新 18", logs: ["還原主分頁 Summary 資訊佈局，包含質押利息、本金及債券均價等詳細欄位。"] },
-                { ver: "V2026.02.25 - 更新 17", logs: ["現金改為「帳戶制」：自動加總各帳戶最新日期的餘額。"] }
+                { ver: "V2026.02.25 - 更新 21", logs: ["股票 Summary 新增「最新市價」欄位。","表格調整為 5 欄顯示，優化小螢幕資訊呈現。"] },
+                { ver: "V2026.02.25 - 更新 20", logs: ["「交易」分頁重命名為「債券」。", "備份檔名優化：匯出檔名包含日期與時間。"] },
+                { ver: "V2026.02.25 - 更新 19", logs: ["「現金」分頁 Summary 增強：顯示總額及各帳戶明細（含日期）。"] }
             ]
         };
 
@@ -152,7 +156,7 @@
             calcEMI(p, r, t) { if (t <= 0) return 0; const ir = r / 12 / 100; return ir === 0 ? p / t : (p * ir * Math.pow(1 + ir, t)) / (Math.pow(1 + ir, t) - 1); },
             calcItemInterest(item, now) { if (!item.date || item.type !== 'loan') return 0; const start = new Date(item.date); const end = item.endDate ? new Date(item.endDate) : now; const days = Math.max(0, (Math.min(now, end) - start) / 86400000); return (item.price * (item.rate / 100) * (days / 365)); },
             getStats(targetDate = new Date(), customDB = state.db) {
-                const stats = { sumB:0, sumC:0, sumBCost:0, sumO:0, sumD:0, sumSI:0, sumUI:0, loanP:0, loanC:0, sumCB:0, sumSVal:0, sumSCost:0, sumCash:0, stockDetails: {}, cashAccounts: {} };
+                const stats = { sumB:0, sumC:0, sumBCost:0, sumO:0, sumD:0, sumSI:0, sumUI:0, loanP:0, sumCB:0, sumSVal:0, sumSCost:0, sumCash:0, stockDetails: {}, cashAccounts: {} };
                 customDB.forEach(i => {
                     const idate = new Date(i.date); if (idate > targetDate) return;
                     const p = parseFloat(i.price) || 0, a = parseFloat(i.amount) || 0;
@@ -206,7 +210,7 @@
         const UI = {
             renderVersionHistory() {
                 document.getElementById('versionListContainer').innerHTML = CONFIG.VERSION_LOG.map(v => `
-                    <div><p class="text-xs font-black text-slate-400 uppercase">${v.ver}</p><ul class="text-sm text-slate-600 list-disc ml-4 mt-1 font-bold">${v.logs.map(l => `<li>${l}</li>`).join('')}</ul></div>
+                    <div><p class="text-xs font-black text-slate-400 uppercase font-black">${v.ver}</p><ul class="text-sm text-slate-600 list-disc ml-4 mt-1 font-bold">${v.logs.map(l => `<li>${l}</li>`).join('')}</ul></div>
                 `).join('');
             },
             switchTab(t) { state.activeTab = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'tab-'+t)); this.renderAll(); },
@@ -220,45 +224,66 @@
                     let stockListHtml = Object.keys(s.stockDetails).map(sym => {
                         const d = s.stockDetails[sym];
                         const mktPrice = state.stockPrices[sym] || (d.cost / d.shares);
-                        return `<div class="grid grid-cols-4 gap-1 text-[10px] py-1 border-b border-slate-50 last:border-0 items-center"><span class="text-indigo-600 font-black">${sym}</span><span class="text-right font-bold">${d.shares.toLocaleString()}</span><span class="text-right text-slate-400 font-bold">$${(d.cost / d.shares).toFixed(2)}</span><span class="text-right font-black text-slate-700 font-bold">$${Math.round(d.shares * mktPrice).toLocaleString()}</span></div>`;
+                        return `<div class="grid grid-cols-5 gap-1 text-[9px] py-1 border-b border-slate-50 last:border-0 items-center font-bold">
+                            <span class="text-indigo-600 font-black">${sym}</span>
+                            <span class="text-right">${d.shares.toLocaleString()}</span>
+                            <span class="text-right text-slate-400">$${(d.cost / d.shares).toFixed(2)}</span>
+                            <span class="text-right text-indigo-500">$${mktPrice.toFixed(2)}</span>
+                            <span class="text-right font-black text-slate-700">$${Math.round(d.shares * mktPrice).toLocaleString()}</span>
+                        </div>`;
                     }).join('');
-                    container.innerHTML = `<div class="mb-4"><p class="text-xs text-slate-400 mb-1 font-bold">股票總市值 (包含緯創信託)</p><div class="flex justify-between items-end"><h2 class="text-2xl font-black text-indigo-600 font-black">$${Math.round(s.sumSVal).toLocaleString()}</h2><span class="text-sm font-black ${stockPL >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${stockPL >= 0 ? '+' : ''}$${Math.round(stockPL).toLocaleString()}</span></div></div><div class="space-y-2 pt-4 border-t border-slate-100"><div class="flex justify-between text-sm font-bold"><span>股票總成本</span><span class="text-slate-500 font-bold">$${Math.round(s.sumSCost).toLocaleString()}</span></div><div class="mt-4 bg-slate-50 rounded-xl p-3"><div class="grid grid-cols-4 gap-1 text-[9px] text-slate-400 uppercase mb-1 font-black"><span>代號</span><span class="text-right">股數</span><span class="text-right">均價</span><span class="text-right">市值</span></div>${stockListHtml || '<p class="text-center text-[10px] text-slate-300 py-2">無持倉資料</p>'}</div></div>`;
+                    container.innerHTML = `
+                        <div class="mb-4">
+                            <p class="text-xs text-slate-400 mb-1 font-bold">股票總市值 (包含緯創信託)</p>
+                            <div class="flex justify-between items-end">
+                                <h2 class="text-2xl font-black text-indigo-600 font-black">$${Math.round(s.sumSVal).toLocaleString()}</h2>
+                                <span class="text-sm font-black ${stockPL >= 0 ? 'text-emerald-500' : 'text-rose-500'} font-black">${stockPL >= 0 ? '+' : ''}$${Math.round(stockPL).toLocaleString()}</span>
+                            </div>
+                            <p class="text-[9px] text-emerald-500 mt-1 font-normal">最後同步: ${state.lastSyncTime || '--'}</p>
+                        </div>
+                        <div class="space-y-2 pt-4 border-t border-slate-100">
+                            <div class="flex justify-between text-sm font-bold"><span>股票總成本</span><span class="text-slate-500 font-bold">$${Math.round(s.sumSCost).toLocaleString()}</span></div>
+                            <div class="mt-4 bg-slate-50 rounded-xl p-3 font-bold">
+                                <div class="grid grid-cols-5 gap-1 text-[8px] text-slate-400 uppercase mb-1 font-black">
+                                    <span>代號</span><span class="text-right">股數</span><span class="text-right">均價</span><span class="text-right">現價</span><span class="text-right">市值</span>
+                                </div>
+                                ${stockListHtml || '<p class="text-center text-[10px] text-slate-300 py-2">無持倉資料</p>'}
+                            </div>
+                        </div>`;
                 } 
                 else if (state.activeTab === 'cash') {
-                    // 現金分頁 Summary
                     let cashListHtml = Object.keys(s.cashAccounts).map(acc => {
                         const d = s.cashAccounts[acc];
-                        return `<div class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0"><div class="flex flex-col"><span class="text-xs font-black text-slate-700">${acc}</span><span class="text-[9px] text-slate-400 font-bold">最後更新: ${d.date}</span></div><span class="text-xs font-black text-emerald-600">$${d.price.toLocaleString()}</span></div>`;
+                        return `<div class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 font-bold"><div class="flex flex-col"><span class="text-xs font-black text-slate-700 font-black">${acc}</span><span class="text-[9px] text-slate-400 font-bold">最後更新: ${d.date}</span></div><span class="text-xs font-black text-emerald-600 font-black">$${d.price.toLocaleString()}</span></div>`;
                     }).join('');
-                    container.innerHTML = `<div class="mb-4"><p class="text-xs text-slate-400 mb-1 font-bold">現金總額 (各帳戶最新餘額)</p><div class="flex justify-between items-end"><h2 class="text-3xl font-black text-emerald-600 tracking-tighter">$${Math.round(s.sumCash).toLocaleString()}</h2></div></div><div class="space-y-2 pt-4 border-t border-slate-100 font-bold"><div class="mt-2 bg-slate-50 rounded-xl p-4"><div class="flex justify-between text-[9px] text-slate-400 uppercase mb-2 font-black"><span>帳戶名稱 / 日期</span><span class="text-right">最新餘額</span></div>${cashListHtml || '<p class="text-center text-[10px] text-slate-300 py-2">無現金帳戶紀錄</p>'}</div></div>`;
+                    container.innerHTML = `<div class="mb-4"><p class="text-xs text-slate-400 mb-1 font-bold">現金總額 (各帳戶最新餘額)</p><div class="flex justify-between items-end"><h2 class="text-3xl font-black text-emerald-600 tracking-tighter font-black">$${Math.round(s.sumCash).toLocaleString()}</h2></div></div><div class="space-y-2 pt-4 border-t border-slate-100 font-bold"><div class="mt-2 bg-slate-50 rounded-xl p-4 font-bold"><div class="flex justify-between text-[9px] text-slate-400 uppercase mb-2 font-black"><span>帳戶名稱 / 日期</span><span class="text-right">最新餘額</span></div>${cashListHtml || '<p class="text-center text-[10px] text-slate-300 py-2">無現金帳戶紀錄</p>'}</div></div>`;
                 }
                 else {
-                    // 其他分頁還原主分頁 Summary
                     const mBond = (s.sumB * state.marketPrice * 1000) + s.sumO;
                     const bondPL = (mBond - s.sumC) + s.sumD - (s.sumSI + s.sumUI);
                     const netAssets = mBond + s.sumSVal + s.sumCash - s.sumUI - s.loanP - s.sumCB;
                     const avgPrice = s.sumB > 0 ? (s.sumC / (s.sumB * 1000)) : 0;
 
                     container.innerHTML = `
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div><p class="text-[11px] text-slate-400 mb-1 font-bold">國內債券 (張)</p><h2 class="text-3xl font-black text-indigo-600 tracking-tighter">${s.sumB.toLocaleString()}</h2></div>
+                        <div class="grid grid-cols-2 gap-4 mb-6 font-bold">
+                            <div><p class="text-[11px] text-slate-400 mb-1 font-bold">國內債券 (張)</p><h2 class="text-3xl font-black text-indigo-600 tracking-tighter font-black">${s.sumB.toLocaleString()}</h2></div>
                             <div class="text-right">
-                                <p class="text-[11px] text-slate-400 mb-1 text-right flex items-center justify-end font-bold">損益(債券) <i class="info-btn" onclick="UI.showHelp('損益計算', '公式：(市值 - 成本) + 累計配息 - 質押利息(已結+未結)')">i</i></p>
-                                <h2 class="text-2xl font-black tracking-tight ${bondPL >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${bondPL >= 0 ? '+' : ''}$${Math.round(bondPL).toLocaleString()}</h2>
+                                <p class="text-[11px] text-slate-400 mb-1 text-right flex items-center justify-end font-bold">損益(債券) <i class="info-btn" onclick="UI.showHelp('損益計算', '公式：(市值 - 成本) + 累計配息 - 質押利息')">i</i></p>
+                                <h2 class="text-2xl font-black tracking-tight font-black ${bondPL >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${bondPL >= 0 ? '+' : ''}$${Math.round(bondPL).toLocaleString()}</h2>
                             </div>
                         </div>
-                        <div class="space-y-3.5 pt-5 border-t border-slate-100">
+                        <div class="space-y-3.5 pt-5 border-t border-slate-100 font-bold text-slate-800">
                             <div class="flex justify-between items-center"><span class="text-sm font-black">00720B 市價 <span class="text-[9px] text-emerald-500 font-normal">(同步: ${state.lastSyncTime || '--'})</span></span><span onclick="UI.openPriceModal()" class="text-lg font-black text-indigo-600 underline cursor-pointer font-black">$${state.marketPrice.toFixed(2)}</span></div>
                             <div class="flex justify-between text-sm font-bold"><span>債券平均價位</span><span class="font-black">$${avgPrice.toFixed(2)}</span></div>
-                            <div class="flex justify-between text-sm font-bold"><span>累計配息收入</span><span class="text-emerald-600 font-black">$${Math.round(s.sumD).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span>累計配息收入</span><span class="text-emerald-600 font-black font-black">$${Math.round(s.sumD).toLocaleString()}</span></div>
                             <div class="flex justify-between text-sm font-bold"><span>股票總市值 <span class="text-[9px] text-slate-400 font-normal">(包含緯創信託)</span></span><span class="font-black">$${Math.round(s.sumSVal).toLocaleString()}</span></div>
-                            <div class="flex justify-between text-sm font-bold"><span>現金總額</span><span class="text-emerald-600 font-black">$${Math.round(s.sumCash).toLocaleString()}</span></div>
-                            <div class="flex justify-between text-sm font-bold"><span>已結算質押利息</span><span class="text-rose-500 font-black font-black">-$${Math.round(s.sumSI).toLocaleString()}</span></div>
-                            <div class="flex justify-between text-sm font-bold"><span>信貸總餘額</span><span class="text-rose-500 font-black font-black">$${Math.round(s.sumCB).toLocaleString()}</span></div>
-                            <div class="flex justify-between text-sm font-bold"><span>質押總金額</span><span class="font-black font-black">$${Math.round(s.loanP).toLocaleString()}</span></div>
-                            <div class="flex justify-between text-sm font-bold"><span>未結算質押利息</span><span class="text-rose-500 font-black font-black">-$${Math.round(s.sumUI).toLocaleString()}</span></div>
-                            <div class="flex justify-between pt-3 border-t font-black text-slate-800 bg-slate-50/50 p-3 rounded-2xl items-center mt-2">
-                                <span class="text-base font-black">總資產 (淨值) <i class="info-btn" onclick="UI.showHelp('總資產計算', '計算公式：(債券市值 + 股票市值 + 現金) - (信貸餘額 + 質押本金 + 未結利息)')">i</i></span>
+                            <div class="flex justify-between text-sm font-bold"><span>現金總額</span><span class="text-emerald-600 font-black font-black">$${Math.round(s.sumCash).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span>已結算質押利息</span><span class="text-rose-500 font-black">-$${Math.round(s.sumSI).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span>信貸總餘額</span><span class="text-rose-500 font-black">$${Math.round(s.sumCB).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span>質押總金額</span><span class="font-black">$${Math.round(s.loanP).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span>未結算質押利息</span><span class="text-rose-500 font-black">-$${Math.round(s.sumUI).toLocaleString()}</span></div>
+                            <div class="flex justify-between pt-3 border-t font-black text-slate-800 bg-slate-50/50 p-3 rounded-2xl items-center mt-2 font-black">
+                                <span class="text-base font-black">總資產 (淨值) <i class="info-btn" onclick="UI.showHelp('總資產計算', '計算公式：市值 - 負債')">i</i></span>
                                 <span class="text-xl font-black text-indigo-700 font-black">$${Math.round(netAssets).toLocaleString()}</span>
                             </div>
                         </div>`;
@@ -283,13 +308,13 @@
                 filtered.forEach(i => {
                     const card = document.createElement('div'); card.className = "bg-white p-5 rounded-[1.5rem] shadow-sm border border-slate-100 mb-3 font-bold text-slate-800";
                     let det = this.getRecordDetailHtml(i, now); const com = i.comment ? `<div class="text-[10px] text-indigo-400 italic mt-2 pt-2 border-t border-slate-50 font-bold"># ${i.comment}</div>` : '';
-                    card.innerHTML = `<div class="flex justify-between items-start mb-2 font-bold"><div><span class="text-sm font-black ${i.type.includes('sell')||i.type.includes('loan')?'text-indigo-700':'text-emerald-700'}">${this.getLabel(i.type)}</span><div class="text-[10px] text-slate-400 font-bold">${i.date}</div></div><div class="flex gap-3"><button onclick="DATA.editRecord('${i.id}')" class="text-indigo-500 text-xs font-bold">編輯</button><button onclick="DATA.deleteRecord('${i.id}')" class="text-rose-400 text-xs font-bold">刪除</button></div></div><div class="bg-slate-50 p-3 rounded-xl font-bold">${det}</div>${com}`;
+                    card.innerHTML = `<div class="flex justify-between items-start mb-2 font-bold"><div><span class="text-sm font-black ${i.type.includes('sell')||i.type.includes('loan')?'text-indigo-700 font-black':'text-emerald-700 font-black'}">${this.getLabel(i.type)}</span><div class="text-[10px] text-slate-400 font-bold">${i.date}</div></div><div class="flex gap-3"><button onclick="DATA.editRecord('${i.id}')" class="text-indigo-500 text-xs font-bold font-bold">編輯</button><button onclick="DATA.deleteRecord('${i.id}')" class="text-rose-400 text-xs font-bold font-bold">刪除</button></div></div><div class="bg-slate-50 p-3 rounded-xl font-bold font-bold">${det}</div>${com}`;
                     view.appendChild(card);
                 });
             },
             getRecordDetailHtml(i, now) {
                 if (i.type === 'stock') { const mktPrice = state.stockPrices[i.symbol] || i.price; const val = i.amount * mktPrice; const cost = i.amount * i.price; const pl = val - cost; return `<div class="text-xs text-indigo-600 font-black">市值: $${Math.round(val).toLocaleString()} (${i.symbol})</div><div class="text-[10px] text-slate-600 font-bold mt-1 font-bold">成本單價: $${i.price} | 最新現價: $${mktPrice}</div><div class="text-[10px] text-slate-400 font-bold font-bold">股數: ${i.amount.toLocaleString()} | 損益: <span class="${pl>=0?'text-emerald-500':'text-rose-500'}">${pl>=0?'+':''}${Math.round(pl).toLocaleString()}</span></div>`; }
-                else if (i.type === 'cash') { return `<div class="text-xs text-emerald-600 font-black">帳戶: ${i.account || "未分類"}</div><div class="text-xs text-emerald-600 font-bold">餘額: $${i.price.toLocaleString()}</div>`; }
+                else if (i.type === 'cash') { return `<div class="text-xs text-emerald-600 font-black font-black">帳戶: ${i.account || "未分類"}</div><div class="text-xs text-emerald-600 font-bold font-bold">餘額: $${i.price.toLocaleString()}</div>`; }
                 else if (i.type === 'credit_loan') { const bal = i.customBalance > 0 ? i.customBalance : CALC.calcBalance(i.price, i.rate, i.totalTerm, i.remainingTerm); return `<div class="text-xs text-rose-500 font-bold">剩餘本金: $${Math.round(bal).toLocaleString()}</div><div class="text-[10px] text-slate-400">年利 ${i.rate}%</div>`; }
                 else if (i.type === 'loan') { const interest = CALC.calcItemInterest(i, now); return `<div class="text-xs text-indigo-600 font-bold">未結利息: $${Math.round(interest).toLocaleString()}</div><div class="text-[10px] text-slate-400">本金: $${i.price.toLocaleString()} | 利率: ${i.rate}%</div>`; }
                 else if (i.type === 'div') { return `<div class="text-xs text-emerald-600 font-bold">實收: $${Math.round(i.price).toLocaleString()}</div><div class="text-[10px] text-slate-400 font-bold">${i.amount} 張 × 1000股</div>`; }
@@ -303,7 +328,7 @@
                 if (d < 0) { m -= 1; d += new Date(target.getFullYear(), target.getMonth(), 0).getDate(); }
                 if (m < 0) { y -= 1; m += 12; }
                 const card = document.createElement('div'); card.className = "bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 text-center font-bold font-bold";
-                card.innerHTML = `<div class="mb-8 font-bold"><h3 class="text-xl font-black text-slate-800">退休進度追蹤</h3><p class="text-[10px] text-slate-400 mt-1 uppercase font-black">${CONFIG.RETIRE_TARGET}</p></div><div class="space-y-6 font-bold"><div class="bg-slate-50 p-6 rounded-[2rem]"><p class="text-xs text-slate-400 mb-2 uppercase font-bold">剩餘時間</p><p class="text-2xl font-black text-indigo-700">${y}年 ${m}月 ${d}天</p></div><div class="bg-indigo-600 p-6 rounded-[2rem] text-white"><p class="text-xs text-white/60 mb-2 uppercase font-bold">預計工作天數</p><p class="text-3xl font-black">${wDays.toLocaleString()} <span class="text-sm font-bold">DAYS</span></p></div></div>`;
+                card.innerHTML = `<div class="mb-8 font-bold font-bold"><h3 class="text-xl font-black text-slate-800 font-black">退休進度追蹤</h3><p class="text-[10px] text-slate-400 mt-1 uppercase font-black">${CONFIG.RETIRE_TARGET}</p></div><div class="space-y-6 font-bold"><div class="bg-slate-50 p-6 rounded-[2rem] font-bold"><p class="text-xs text-slate-400 mb-2 uppercase font-bold">剩餘時間</p><p class="text-2xl font-black text-indigo-700 font-black">${y}年 ${m}月 ${d}天</p></div><div class="bg-indigo-600 p-6 rounded-[2rem] text-white font-bold"><p class="text-xs text-white/60 mb-2 uppercase font-bold">預計工作天數</p><p class="text-3xl font-black font-black">${wDays.toLocaleString()} <span class="text-sm font-bold">DAYS</span></p></div></div>`;
                 view.appendChild(card);
             },
             renderReports(view, now) {
@@ -352,7 +377,12 @@
             sync() { localStorage.setItem(CONFIG.DB_KEY, JSON.stringify(state.db)); },
             resetAll() { if(confirm('重設所有資料？')){ localStorage.clear(); location.reload(); } },
             updateManualPrice() { const v = parseFloat(document.getElementById('mPriceInput').value); if(v>0){ state.marketPrice=v; localStorage.setItem(CONFIG.PRICE_KEY, v); UI.closeAllModals(); UI.renderAll(); } },
-            exportJSON() { const n = new Date(); const b = new Blob([JSON.stringify(state.db, null, 2)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `assets_backup_${n.getTime()}.json`; a.click(); },
+            exportJSON() {
+                const n = new Date(); const Y = n.getFullYear(); const M = (n.getMonth() + 1).toString().padStart(2, '0'); const D = n.getDate().toString().padStart(2, '0'); const hh = n.getHours().toString().padStart(2, '0'); const mm = n.getMinutes().toString().padStart(2, '0');
+                const ts = `${Y}${M}${D}_${hh}${mm}`;
+                const b = new Blob([JSON.stringify(state.db, null, 2)], {type:'application/json'});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `assets_backup_${ts}.json`; a.click();
+            },
             triggerImport() { document.getElementById('importFile').click(); },
             handleFileImport(e) { const f = e.target.files[0]; const reader = new FileReader(); reader.onload = (ev) => { try { state.db = JSON.parse(ev.target.result); this.sync(); location.reload(); } catch(e) { alert('格式錯誤'); } }; reader.readAsText(f); },
             syncToLine() { window.location.href = `line://msg/text/?${encodeURIComponent(JSON.stringify(state.db))}`; },
