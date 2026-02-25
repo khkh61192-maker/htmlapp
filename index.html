@@ -1,13 +1,12 @@
---- START OF FILE text/html ---
-
 <!-- 
 [AI HANDOVER & DEVELOPER INFO]
-版本：V2026.02.25 - 更新 21 (股票 Summary 欄位增強)
+版本：V2026.02.25 - 更新 22 (移除頂部冗餘文字 & 規範強化)
 開發規範：
 1. 修改後，必須在 CONFIG.VERSION_LOG 陣列最上方新增紀錄。
 2. 股票 Summary：新增「最新市價」欄位，並將明細表調整為 5 欄 (代號/股數/均價/現價/市值)。
 3. 備份檔名格式：`assets_backup_YYYYMMDD_HHMM.json`。
 4. 現金計算邏輯：帳戶制，取各帳戶最新日期餘額。
+5. 禁止輸出：輸出程式碼時，嚴禁在 <!DOCTYPE html> 之前包含任何如 "--- START OF FILE ---" 的非 HTML 註解文字，避免頁面頂部出現亂碼。
 -->
 
 <!DOCTYPE html>
@@ -88,7 +87,6 @@
         </div>
     </div>
 
-    <!-- 其餘 Modal 保持不變 -->
     <div id="modalOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center z-50">
         <div id="dataModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate max-h-[90vh] overflow-y-auto hidden">
             <div class="flex justify-between items-center mb-6">
@@ -126,7 +124,6 @@
                 <button onclick="DATA.saveRecord()" class="w-full bg-theme-blue text-white font-black py-5 rounded-2xl shadow-xl mt-4 text-lg">儲存紀錄</button>
             </div>
         </div>
-        <!-- 幫助、設定、Excel、市價等 Modal 略... (邏輯與之前版本相同) -->
         <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-6 font-bold"><div class="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl modal-animate text-center font-bold"><h3 id="helpTitle" class="text-lg font-black mb-4">說明</h3><p id="helpContent" class="text-sm text-slate-600 leading-relaxed mb-6"></p><button onclick="UI.closeHelp()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-500">知道了</button></div></div>
         <div id="settingsModal" class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-6">數據管理</h3><div class="space-y-3 font-bold"><button onclick="DATA.syncToLine()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm border border-emerald-100 font-black font-bold">🟢 同步至雲端 (LINE 分享)</button><button onclick="UI.openExcelModal()" class="w-full bg-indigo-50 text-indigo-700 py-4 rounded-2xl text-sm font-bold">Excel 快速匯入</button><button onclick="DATA.exportJSON()" class="w-full bg-slate-50 text-slate-700 py-4 rounded-2xl text-sm font-bold">匯出備份 (JSON)</button><button onclick="DATA.triggerImport()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm font-bold">匯入更新 (JSON)</button><button onclick="DATA.resetAll()" class="w-full bg-rose-50 text-rose-700 py-4 rounded-2xl text-xs font-bold">清空資料</button><button onclick="UI.closeAllModals()" class="w-full text-slate-400 pt-4 font-medium text-sm font-bold">關閉</button></div></div>
         <div id="priceModal" class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="font-black mb-2 text-left ml-2 font-bold">更新 00720B 市價</h3><input type="number" id="mPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600 font-bold"><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.updateManualPrice()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">更新</button></div></div>
@@ -143,6 +140,7 @@
             INITIAL_PRICE: 33.66,
             RETIRE_TARGET: "2031-03-15",
             VERSION_LOG: [
+                { ver: "V2026.02.25 - 更新 22", logs: ["移除頁面頂部冗餘文字標籤，並於開發規範新增防呆條款。"] },
                 { ver: "V2026.02.25 - 更新 21", logs: ["股票 Summary 新增「最新市價」欄位。","表格調整為 5 欄顯示，優化小螢幕資訊呈現。"] },
                 { ver: "V2026.02.25 - 更新 20", logs: ["「交易」分頁重命名為「債券」。", "備份檔名優化：匯出檔名包含日期與時間。"] },
                 { ver: "V2026.02.25 - 更新 19", logs: ["「現金」分頁 Summary 增強：顯示總額及各帳戶明細（含日期）。"] }
