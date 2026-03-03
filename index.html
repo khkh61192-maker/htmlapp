@@ -1,12 +1,13 @@
 <!-- 
 [AI HANDOVER & DEVELOPER INFO]
-版本：V2026.02.25 - 更新 22 (移除頂部冗餘文字 & 規範強化)
+版本：V2026.03.03 - 更新 23 (現金帳戶點選快速新增)
 開發規範：
 1. 修改後，必須在 CONFIG.VERSION_LOG 陣列最上方新增紀錄。
 2. 股票 Summary：新增「最新市價」欄位，並將明細表調整為 5 欄 (代號/股數/均價/現價/市值)。
 3. 備份檔名格式：`assets_backup_YYYYMMDD_HHMM.json`。
 4. 現金計算邏輯：帳戶制，取各帳戶最新日期餘額。
 5. 禁止輸出：輸出程式碼時，嚴禁在 <!DOCTYPE html> 之前包含任何如 "--- START OF FILE ---" 的非 HTML 註解文字，避免頁面頂部出現亂碼。
+6. 互動增強：現金 Summary 帳戶列需支援點擊快速跳轉至新增紀錄，並自動帶入帳戶名與今日日期。
 -->
 
 <!DOCTYPE html>
@@ -140,10 +141,10 @@
             INITIAL_PRICE: 33.66,
             RETIRE_TARGET: "2031-03-15",
             VERSION_LOG: [
+                { ver: "V2026.03.03 - 更新 23", logs: ["現金 Summary 支援點擊帳戶直接新增紀錄，並自動帶入名稱與今日日期。"] },
                 { ver: "V2026.02.25 - 更新 22", logs: ["移除頁面頂部冗餘文字標籤，並於開發規範新增防呆條款。"] },
                 { ver: "V2026.02.25 - 更新 21", logs: ["股票 Summary 新增「最新市價」欄位。","表格調整為 5 欄顯示，優化小螢幕資訊呈現。"] },
-                { ver: "V2026.02.25 - 更新 20", logs: ["「交易」分頁重命名為「債券」。", "備份檔名優化：匯出檔名包含日期與時間。"] },
-                { ver: "V2026.02.25 - 更新 19", logs: ["「現金」分頁 Summary 增強：顯示總額及各帳戶明細（含日期）。"] }
+                { ver: "V2026.02.25 - 更新 20", logs: ["「交易」分頁重命名為「債券」。", "備份檔名優化：匯出檔名包含日期與時間。"] }
             ]
         };
 
@@ -213,6 +214,15 @@
             },
             switchTab(t) { state.activeTab = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'tab-'+t)); this.renderAll(); },
             
+            quickAddCash(accName) {
+                this.openModal();
+                document.getElementById('fType').value = 'cash';
+                document.getElementById('fAccount').value = accName;
+                document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+                this.toggleFormFields();
+                setTimeout(() => document.getElementById('fPrice').focus(), 300);
+            },
+
             renderSummary() {
                 const s = CALC.getStats();
                 const container = document.getElementById('summaryCard');
@@ -252,7 +262,7 @@
                 else if (state.activeTab === 'cash') {
                     let cashListHtml = Object.keys(s.cashAccounts).map(acc => {
                         const d = s.cashAccounts[acc];
-                        return `<div class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 font-bold"><div class="flex flex-col"><span class="text-xs font-black text-slate-700 font-black">${acc}</span><span class="text-[9px] text-slate-400 font-bold">最後更新: ${d.date}</span></div><span class="text-xs font-black text-emerald-600 font-black">$${d.price.toLocaleString()}</span></div>`;
+                        return `<div onclick="UI.quickAddCash('${acc}')" class="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 font-bold cursor-pointer active:bg-slate-100 transition-colors rounded-lg px-1 -mx-1"><div class="flex flex-col"><span class="text-xs font-black text-slate-700 font-black">${acc}</span><span class="text-[9px] text-slate-400 font-bold">最後更新: ${d.date}</span></div><span class="text-xs font-black text-emerald-600 font-black">$${d.price.toLocaleString()}</span></div>`;
                     }).join('');
                     container.innerHTML = `<div class="mb-4"><p class="text-xs text-slate-400 mb-1 font-bold">現金總額 (各帳戶最新餘額)</p><div class="flex justify-between items-end"><h2 class="text-3xl font-black text-emerald-600 tracking-tighter font-black">$${Math.round(s.sumCash).toLocaleString()}</h2></div></div><div class="space-y-2 pt-4 border-t border-slate-100 font-bold"><div class="mt-2 bg-slate-50 rounded-xl p-4 font-bold"><div class="flex justify-between text-[9px] text-slate-400 uppercase mb-2 font-black"><span>帳戶名稱 / 日期</span><span class="text-right">最新餘額</span></div>${cashListHtml || '<p class="text-center text-[10px] text-slate-300 py-2">無現金帳戶紀錄</p>'}</div></div>`;
                 }
