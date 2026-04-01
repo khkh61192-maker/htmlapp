@@ -1,13 +1,14 @@
 <!-- 
 [AI HANDOVER & DEVELOPER INFO]
-版本：V2026.03.03 - 更新 23 (現金帳戶點選快速新增)
+版本：V2026.04.01 - 更新 24 (表單重置 & 債券市值顯化)
 開發規範：
 1. 修改後，必須在 CONFIG.VERSION_LOG 陣列最上方新增紀錄。
 2. 股票 Summary：新增「最新市價」欄位，並將明細表調整為 5 欄 (代號/股數/均價/現價/市值)。
 3. 備份檔名格式：`assets_backup_YYYYMMDD_HHMM.json`。
 4. 現金計算邏輯：帳戶制，取各帳戶最新日期餘額。
-5. 禁止輸出：輸出程式碼時，嚴禁在 <!DOCTYPE html> 之前包含任何如 "--- START OF FILE ---" 的非 HTML 註解文字，避免頁面頂部出現亂碼。
-6. 互動增強：現金 Summary 帳戶列需支援點擊快速跳轉至新增紀錄，並自動帶入帳戶名與今日日期。
+5. 禁止輸出：輸出程式碼時，嚴禁在 <!DOCTYPE html> 之前包含任何如 "--- START OF FILE ---" 的非 HTML 註解文字。
+6. 互動增強：現金 Summary 點選快速新增；新增數據時需重置表單。
+7. 計算邏輯：總資產 = (債券市值 + 國外資產 + 股票市值 + 現金) - (質押本金 + 未結利息 + 信貸餘額)。
 -->
 
 <!DOCTYPE html>
@@ -125,7 +126,7 @@
                 <button onclick="DATA.saveRecord()" class="w-full bg-theme-blue text-white font-black py-5 rounded-2xl shadow-xl mt-4 text-lg">儲存紀錄</button>
             </div>
         </div>
-        <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-6 font-bold"><div class="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl modal-animate text-center font-bold"><h3 id="helpTitle" class="text-lg font-black mb-4">說明</h3><p id="helpContent" class="text-sm text-slate-600 leading-relaxed mb-6"></p><button onclick="UI.closeHelp()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-500">知道了</button></div></div>
+        <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-6 font-bold"><div class="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl modal-animate text-center font-bold"><h3 id="helpTitle" class="text-lg font-black mb-4">說明</h3><p id="helpContent" class="text-xs text-slate-600 text-left leading-relaxed mb-6"></p><button onclick="UI.closeHelp()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-500">知道了</button></div></div>
         <div id="settingsModal" class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-6">數據管理</h3><div class="space-y-3 font-bold"><button onclick="DATA.syncToLine()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm border border-emerald-100 font-black font-bold">🟢 同步至雲端 (LINE 分享)</button><button onclick="UI.openExcelModal()" class="w-full bg-indigo-50 text-indigo-700 py-4 rounded-2xl text-sm font-bold">Excel 快速匯入</button><button onclick="DATA.exportJSON()" class="w-full bg-slate-50 text-slate-700 py-4 rounded-2xl text-sm font-bold">匯出備份 (JSON)</button><button onclick="DATA.triggerImport()" class="w-full bg-emerald-50 text-emerald-700 py-4 rounded-2xl text-sm font-bold">匯入更新 (JSON)</button><button onclick="DATA.resetAll()" class="w-full bg-rose-50 text-rose-700 py-4 rounded-2xl text-xs font-bold">清空資料</button><button onclick="UI.closeAllModals()" class="w-full text-slate-400 pt-4 font-medium text-sm font-bold">關閉</button></div></div>
         <div id="priceModal" class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center hidden fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="font-black mb-2 text-left ml-2 font-bold">更新 00720B 市價</h3><input type="number" id="mPriceInput" inputmode="decimal" step="0.01" class="w-full bg-slate-100 p-4 rounded-2xl mb-4 text-xl font-bold text-indigo-600 font-bold"><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.updateManualPrice()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">更新</button></div></div>
         <div id="excelModal" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 modal-animate hidden text-center fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 font-bold"><h3 class="text-xl font-black mb-2 font-bold">Excel 快速匯入</h3><textarea id="excelPasteArea" class="w-full bg-slate-100 p-4 rounded-2xl h-40 text-xs font-mono mb-4 border-none font-bold" placeholder="日期(Tab)張數(Tab)單價"></textarea><div class="flex gap-2 font-bold"><button onclick="UI.closeAllModals()" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold">取消</button><button onclick="DATA.processExcel()" class="flex-1 bg-theme-blue text-white py-3 rounded-xl text-sm font-bold">執行匯入</button></div></div>
@@ -141,10 +142,10 @@
             INITIAL_PRICE: 33.66,
             RETIRE_TARGET: "2031-03-15",
             VERSION_LOG: [
+                { ver: "V2026.04.01 - 更新 24", logs: ["首頁 Summary 新增「債券總市值」顯示。","修正新增紀錄時會殘留舊資料的問題（表單自動重置）。","總資產註解詳盡化，條列每一項資產與負債明細。"] },
                 { ver: "V2026.03.03 - 更新 23", logs: ["現金 Summary 支援點擊帳戶直接新增紀錄，並自動帶入名稱與今日日期。"] },
                 { ver: "V2026.02.25 - 更新 22", logs: ["移除頁面頂部冗餘文字標籤，並於開發規範新增防呆條款。"] },
-                { ver: "V2026.02.25 - 更新 21", logs: ["股票 Summary 新增「最新市價」欄位。","表格調整為 5 欄顯示，優化小螢幕資訊呈現。"] },
-                { ver: "V2026.02.25 - 更新 20", logs: ["「交易」分頁重命名為「債券」。", "備份檔名優化：匯出檔名包含日期與時間。"] }
+                { ver: "V2026.02.25 - 更新 21", logs: ["股票 Summary 新增「最新市價」欄位。","表格調整為 5 欄顯示。"] }
             ]
         };
 
@@ -215,7 +216,7 @@
             switchTab(t) { state.activeTab = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'tab-'+t)); this.renderAll(); },
             
             quickAddCash(accName) {
-                this.openModal();
+                this.openModal(); // 這會先重置所有欄位
                 document.getElementById('fType').value = 'cash';
                 document.getElementById('fAccount').value = accName;
                 document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
@@ -282,6 +283,7 @@
                         </div>
                         <div class="space-y-3.5 pt-5 border-t border-slate-100 font-bold text-slate-800">
                             <div class="flex justify-between items-center"><span class="text-sm font-black">00720B 市價 <span class="text-[9px] text-emerald-500 font-normal">(同步: ${state.lastSyncTime || '--'})</span></span><span onclick="UI.openPriceModal()" class="text-lg font-black text-indigo-600 underline cursor-pointer font-black">$${state.marketPrice.toFixed(2)}</span></div>
+                            <div class="flex justify-between text-sm font-bold"><span>債券總市值</span><span class="text-indigo-600 font-black">$${Math.round(mBond).toLocaleString()}</span></div>
                             <div class="flex justify-between text-sm font-bold"><span>債券平均價位</span><span class="font-black">$${avgPrice.toFixed(2)}</span></div>
                             <div class="flex justify-between text-sm font-bold"><span>累計配息收入</span><span class="text-emerald-600 font-black font-black">$${Math.round(s.sumD).toLocaleString()}</span></div>
                             <div class="flex justify-between text-sm font-bold"><span>股票總市值 <span class="text-[9px] text-slate-400 font-normal">(包含緯創信託)</span></span><span class="font-black">$${Math.round(s.sumSVal).toLocaleString()}</span></div>
@@ -291,7 +293,7 @@
                             <div class="flex justify-between text-sm font-bold"><span>質押總金額</span><span class="font-black">$${Math.round(s.loanP).toLocaleString()}</span></div>
                             <div class="flex justify-between text-sm font-bold"><span>未結算質押利息</span><span class="text-rose-500 font-black">-$${Math.round(s.sumUI).toLocaleString()}</span></div>
                             <div class="flex justify-between pt-3 border-t font-black text-slate-800 bg-slate-50/50 p-3 rounded-2xl items-center mt-2 font-black">
-                                <span class="text-base font-black">總資產 (淨值) <i class="info-btn" onclick="UI.showHelp('總資產計算', '計算公式：市值 - 負債')">i</i></span>
+                                <span class="text-base font-black">總資產 (淨值) <i class="info-btn" onclick="UI.showHelp('總資產計算', '計算公式：\\n\\n【資產項目】\\n+ 債券總市值 (國內+國外)\\n+ 股票總市值\\n+ 現金總額\\n\\n【扣除負債】\\n- 質押借款本金\\n- 未結算質押利息\\n- 信貸剩餘本金')">i</i></span>
                                 <span class="text-xl font-black text-indigo-700 font-black">$${Math.round(netAssets).toLocaleString()}</span>
                             </div>
                         </div>`;
@@ -350,12 +352,32 @@
                 new Chart(cTr, { type: 'line', data: { labels: lbls, datasets: [{ label: '淨值趨勢', data: pts, borderColor: '#3B7695', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 118, 149, 0.1)' }] } });
             },
             closeAllModals() { document.getElementById('modalOverlay').classList.add('hidden'); ['dataModal','settingsModal','priceModal','excelModal','versionModal','helpModal'].forEach(m=>document.getElementById(m).classList.add('hidden')); },
-            openModal() { this.closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('dataModal').classList.remove('hidden'); document.getElementById('editId').value=''; this.toggleFormFields(); },
+            openModal() { 
+                this.closeAllModals(); 
+                document.getElementById('modalOverlay').classList.replace('hidden','flex'); 
+                document.getElementById('dataModal').classList.remove('hidden'); 
+                // 重置表單數據
+                document.getElementById('editId').value = '';
+                document.getElementById('fLocation').value = 'domestic';
+                document.getElementById('fType').value = 'buy';
+                document.getElementById('fAccount').value = '';
+                document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('fEndDate').value = '';
+                document.getElementById('fAmount').value = '';
+                document.getElementById('fPrice').value = '';
+                document.getElementById('fRate').value = '';
+                document.getElementById('fTotalTerm').value = '';
+                document.getElementById('fRemainingTerm').value = '';
+                document.getElementById('fDueDay').value = '';
+                document.getElementById('fComment').value = '';
+                document.getElementById('fSymbol').value = '';
+                this.toggleFormFields(); 
+            },
             openSettingsModal() { this.closeAllModals(); document.getElementById('settingsModal').classList.remove('hidden'); },
             openVersionModal() { this.renderVersionHistory(); this.closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('versionModal').classList.remove('hidden'); },
             openPriceModal() { this.closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('priceModal').classList.remove('hidden'); document.getElementById('mPriceInput').value = state.marketPrice; },
             openExcelModal() { this.closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden','flex'); document.getElementById('excelModal').classList.remove('hidden'); },
-            showHelp(title, content) { this.closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden', 'flex'); document.getElementById('helpTitle').innerText = title; document.getElementById('helpContent').innerText = content; document.getElementById('helpModal').classList.remove('hidden'); },
+            showHelp(title, content) { this.closeAllModals(); document.getElementById('modalOverlay').classList.replace('hidden', 'flex'); document.getElementById('helpTitle').innerText = title; document.getElementById('helpContent').innerText = content.replace(/\\n/g, '\n'); document.getElementById('helpModal').classList.remove('hidden'); },
             closeHelp() { document.getElementById('helpModal').classList.add('hidden'); document.getElementById('modalOverlay').classList.add('hidden'); },
             closeVersionModal() { document.getElementById('versionModal').classList.add('hidden'); document.getElementById('modalOverlay').classList.add('hidden'); },
             toggleFormFields() {
